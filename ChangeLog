@@ -1,4 +1,4 @@
-2003-10-30  Bas Wijnen  <shevek@hurd.psnet.net>
+2003-10-30  Bas Wijnen  <b.wijnen@phys.rug.nl>
 
 	* z80asm.c: Added binary output as hex to listfile.
 
@@ -8,11 +8,11 @@
 	added long option support and help/version information.
 	* README: Updated documentation.
 
-2002-05-15    <bas@client107-126.kabela.oprit.rug.nl>
+2002-05-15  Bas Wijnen  <b.wijnen@phys.rug.nl>
 
 	* z80asm.c (rd_expr): Added equations in expr and bugfix
 	(assemble): Added if/else/endif
 
-2002-04-28    <bas@client107-126.kabela.oprit.rug.nl>
+2002-04-28  Bas Wijnen  <b.wijnen@phys.rug.nl>
 
 	* assembler.c: Started changelog
