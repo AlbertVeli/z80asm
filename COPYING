@@ -1,0 +1,24 @@
+COPYING - Copyright information for z80asm, the assembler for the z80 by
+Bas Wijnen.
+
+All parts of the program are Copyright (C) Bas Wijnen.  A number of license
+agreements are presented, which you may accept.  Only the license agreements
+presented here can be accepted.
+
+First of all, you may accept the GNU General Public License version 2.  The
+complete license is included in the distribution as a file named GPL2.
+
+Furthermore, you may accept any version later than 2 of the GNU General Public
+License, if and only if that newer version satisfies the following conditions:
+
+- The license must only allow for PROGRAM to be redistributed, if the
+redistributed PROGRAM is licensed under the same license, including version.
+
+- The license must allow anyone who receives a part of PROGRAM as a binary file
+to receive the source code for that part.  The whole program is considered a
+part of itself.
+
+- The license must give the same rights to every person who accepts it.
+
+In the above, PROGRAM means the program, or a part thereof, with or without
+modifications, including without limitation additions.

@@ -1,0 +1,100 @@
+README for shevek's MSX z80 assembler
+
+See INSTALL for installation instructions
+
+The assembler works like gcc. You need an external editor to create your
+source file. Then you assemble it to a z80 binary with this assembler.
+
+By default, the assembler uses stdin as its only input file and stdout as
+its output file. Any arguments with no flags are taken as input files.
+If more than one input file is specified, the files are concatenated.
+The following flags are supported:
+
+-h	--help		give a help text
+
+-V	--version	give version information
+
+-v	--verbose	be verbose. specify more than once to be more verbose.
+			If you want verbosity about parsing the commandline,
+			then this should be the the first argument.
+
+-l	--list file	specify file to write out the input, with lines on
+			which files are read and every source line prefixed
+			with the address. (list file)
+
+-L	--label file	specify file to write all labels to, in assembler
+			readable format (human readable as well). Every line is
+			of the form:
+			label:	equ value
+			so it can be included in source.
+
+-i	--input file	specify an input file.
+
+-o	--output file	specify the output file.
+
+Some notes on the assembler directives and mnemonics:
+All text is case insensitive, except when quoted.
+Undocumented opcodes are as much as possible supported. There are some errors
+in the implementation, that are being worked on (see BUGS). Names for
+undocumented opcodes are:
+sll and sli are equal and can both be used.
+ixh, ixl, iyh and iyl can be used.
+
+Assembler directives are:
+defb and db	arg,arg,arg,...
+defw and dw	arg,arg,arg,...
+defs and ds	count,value=0
+org		address
+if		expression
+else
+else
+...
+endif	
+include		'file'
+			Note: the quotes around the file for include are
+			mandatory, but you can choose the quotes yourself.
+			eg, you may use % or even a letter as a quote.
+			The filename does not undergo any expansion, so
+			\, ~, $, etc are passed as written (which means ~
+			will not be your home directory.)
+
+defb/db can also take strings, when enclosed in double quotes:
+defb	"This text should be in a buffer", 0
+
+All expressions can use the following operators, in order of precedence:
+(a, b and c denote subexpressions)
+a?b:c				If a is not zero, return b, otherwise c
+a|b				bitwise or
+a^b				bitwise xor
+a&b				bitwise and
+a==b	a!=b			equality
+a<=b	a>=b	a<b	a>b	inequality
+a<<b	a>>b			shift
+a+b	a-b			addition and subtraction
+a*b	a/b	a%b		multiplication, division and modulo
+~a	+a	-a		bitwise not, no effect and negation
+(a)				parenthesis
+
+Literals in expressions may be written as:
+14	decimal number
+014	octal number
+0x14	hexadecimal number
+%10	binary number
+@c14	number 14, where the base of the number is 13 (so c + 1 == 10)
+'s'	ASCII code of s
+$	address of first byte of current command
+
+In all expressions, labels may be used.  However, there are some expressions
+where the value must be computable at once, and therefore only previously
+defined labels may be used.  This is the case for:
+- The argument of org
+- The argument of equ (eg, a label definition)
+- The first argument of ds
+- The argument of if
+In all other expression, labels which are defined later may be used.
+
+Warning: parts that are not compiled because of an if statement are only
+checked to have a correct command. The argument is not parsed.  This means
+that if the file passes through the assembler with no warnings or errors, it
+may still not assemble correctly in a different setting (where the if's
+give different results).

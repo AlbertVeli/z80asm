@@ -1,0 +1,9 @@
+How to install shevek's MSX z80 assembler
+
+To compile:
+go to the source directory
+type ``make'' (without the quotes)
+On some systems, you may need gmake
+
+To install, copy the file z80asm into your search path, for example in
+/usr/local/bin or in ~/bin (you may need to put this in the search path)

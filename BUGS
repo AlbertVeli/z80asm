@@ -1,0 +1,4 @@
+known BUGS in shevek's MSX z80 assembler:
+- out (c),0
+- shift/rotate (i[xy]+d),[bcdehla]
+- jp (i[xy]) does not print index byte
