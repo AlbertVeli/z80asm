@@ -1,3 +1,7 @@
+2003-11-19  Bas Wijnen  <b.wijnen@phys.rug.nl>
+
+	* z80asm.c: Changed expression handling, bugfixes.
+	
 2003-10-30  Bas Wijnen  <b.wijnen@phys.rug.nl>
 
 	* z80asm.c: Added binary output as hex to listfile.
