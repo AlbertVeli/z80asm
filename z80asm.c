@@ -1,4 +1,4 @@
-/* Z80 assembler for MSX programs. by shevek
+/* Z80 assembler by shevek
 
    Copyright (C) 2002-2003 Bas Wijnen <b.wijnen@phys.rug.nl>
 

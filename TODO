@@ -1,4 +1,4 @@
-TODO for shevek's MSX z80 assembler:
+TODO for shevek's Z80 assembler:
 - fix the bugs from BUGS :-)
 - make header files containing MSX system constants
 - a flag for warnings about unofficial instructions would be nice

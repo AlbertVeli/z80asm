@@ -1,4 +1,4 @@
-# Makefile for the MSX z80 assembler by shevek
+# Makefile for the Z80 assembler by shevek
 # Copyright (C) 2002  Bas Wijnen
 #
 # This program is free software; you can redistribute it and/or modify
@@ -28,10 +28,13 @@ gnulib/%.o:gnulib/%.c gnulib/getopt.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f a.bin a.out core *~ \#* z80asm
+	for i in . gnulib ; do \
+		rm -f $i/a.bin $i/a.out $i/core $i/*~ $i/\#* $i/*.o ; \
+	done
+	rm z80asm
 
 dist: clean
-	rm -rf /tmp/msxz80asm
-	tar cf - -C .. msxz80asm | tar xf - -C /tmp
-	find /tmp/msxz80asm -name CVS | xargs rm -rf
-	tar cvzf ../msxz80asm-`date +%Y%m%d`00.tar.gz -C /tmp msxz80asm
+	rm -rf /tmp/z80asm
+	tar cf - -C .. z80asm | tar xf - -C /tmp
+	find /tmp/z80asm -name CVS | xargs rm -rf
+	tar cvzf ../z80asm-`date +%Y%m%d`00.tar.gz -C /tmp z80asm
