@@ -31,7 +31,7 @@ clean:
 	for i in . gnulib ; do \
 		rm -f $i/a.bin $i/a.out $i/core $i/*~ $i/\#* $i/*.o ; \
 	done
-	rm z80asm
+	rm -f z80asm
 
 dist: clean
 	rm -rf /tmp/z80asm
