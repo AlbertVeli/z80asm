@@ -39,11 +39,11 @@
 /* mnemonics. THESE MUST BE IN THE SAME ORDER AS const char *mnemonic[]! */
 enum mnemonic {
   CALL,CPDR,CPIR,DJNZ,HALT,INDR,INIR,LDDR,LDIR,OTDR,OTIR,OUTD,OUTI,PUSH,
-  RETI,RETN,RLCA,RRCA,DEFB,DEFW,DEFS,
+  RETI,RETN,RLCA,RRCA,DEFB,DEFW,DEFS,DEFM,
   ADC,ADD,AND,BIT,CCF,CPD,CPI,CPL,DAA,DEC,EQU,EXX,INC,IND,INI,LDD,LDI,NEG,NOP,
   OUT,POP,RES,RET,RLA,RLC,RLD,RRA,RRC,RRD,RST,SBC,SCF,SET,SLA,SLL,SLI,SRA,SRL,
   SUB,XOR,ORG,
-  CP,DI,EI,EX,IM,IN,JP,JR,LD,OR,RL,RR,DB,DW,DS,
+  CP,DI,EI,EX,IM,IN,JP,JR,LD,OR,RL,RR,DB,DW,DS,DM,
   INCLUDE,IF,ELSE,ENDIF
 };
 
@@ -116,12 +116,12 @@ struct name
 /* mnemonics, used as argument to indx() in assemble */
 const char *mnemonics[]={
   "call","cpdr","cpir","djnz","halt","indr","inir","lddr","ldir","otdr","otir",
-  "outd","outi","push","reti","retn","rlca","rrca","defb","defw","defs","adc",
-  "add","and","bit","ccf","cpd","cpi","cpl","daa","dec","equ","exx","inc",
-  "ind","ini","ldd","ldi","neg","nop","out","pop","res","ret","rla","rlc",
-  "rld","rra","rrc","rrd","rst","sbc","scf","set","sla","sll","sli","sra",
-  "srl","sub","xor","org","cp","di","ei","ex","im","in","jp","jr","ld","or",
-  "rl","rr","db","dw","ds","include","if","else","endif",NULL
+  "outd","outi","push","reti","retn","rlca","rrca","defb","defw","defs","defm",
+  "adc","add","and","bit","ccf","cpd","cpi","cpl","daa","dec","equ","exx",
+  "inc","ind","ini","ldd","ldi","neg","nop","out","pop","res","ret","rla",
+  "rlc","rld","rra","rrc","rrd","rst","sbc","scf","set","sla","sll","sli",
+  "sra","srl","sub","xor","org","cp","di","ei","ex","im","in","jp","jr","ld",
+  "or","rl","rr","db","dw","ds","dm","include","if","else","endif",NULL
 };
 
 /* linked lists */
@@ -525,6 +525,7 @@ static void write_one_byte (int b, int list)
       fprintf (listfile, " %02x", b);
       listdepth += 3;
     }
+  addr++;
 }
 
 /* write byte to outfile and possibly some index things as well */
@@ -541,7 +542,6 @@ wrtb (int b)
 		indexed);
       write_one_byte (indexed, 1);
       indexed = 0;
-      addr++;
     }
   if (writebyte)
     {
@@ -560,7 +560,6 @@ wrtb (int b)
   else
     {
       write_one_byte (b, 1);
-      addr++;
     }
   if (indexjmp)
     {
@@ -1200,6 +1199,8 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
 	firstreference->prev = tmp;
       tmp->prev = NULL;
       firstreference = tmp;
+      /* Dummy value which should not give warnings */
+      value = (type == TYPE_RELB) ? ds_count : 0;
     }
   wrt_ref (value, type, ds_count);
 }
@@ -1783,23 +1784,19 @@ wrt_ref (int val, int type, int count)
 	  return;
 	}
       write_one_byte (val + 0xC7, 1);
-      addr++;
       return;
     case TYPE_ABSW:
       write_one_byte (val & 0xff, 1);
       write_one_byte ( (val >> 8) & 0xff, 1);
-      addr++;
       return;
     case TYPE_ABSB:
       write_one_byte (val & 0xff, 1);
-      addr++;
       return;
     case TYPE_DS:
       if (havelist) fprintf (listfile, " %02x...", val & 0xff);
       while (count--)
 	{
 	  write_one_byte (val & 0xff, 0);
-	  addr++;
 	}
       return;
     case TYPE_BSR:
@@ -1818,7 +1815,6 @@ wrt_ref (int val, int type, int count)
 	  printerr ("Warning: relative jump out of range (%d).\n", val);
 	}
       write_one_byte (val & 0xff, 1);
-      addr++;
     }
 }
 
@@ -2489,6 +2485,8 @@ assemble (void)
 	      break;
 	    case DEFB:
 	    case DB:
+	    case DEFM:
+	    case DM:
 	      ptr = delspc (ptr);
 	      if (*ptr != '"' && !(r = rd_byte (&ptr, ',')))
 		break;
@@ -2558,7 +2556,6 @@ assemble (void)
 	      for (i = 0; i < r; i++)
 		{
 		  write_one_byte (0, 0);
-		  ++addr;
 		}
 	      break;
 	    case ORG:

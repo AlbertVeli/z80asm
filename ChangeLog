@@ -1,3 +1,11 @@
+2004-10-01  H. Peter Anvin  <hpa@users.sourceforge.net>
+
+	* z80asm.c (enum mnemonic, mnemonics, assemble): Added dm/defm as an
+	alias for db/defb.
+	* README: Updated documentation accordingly.
+	* z80asm.c (write_one_byte, wrtb, new_reference, wrt_ref, assemble):
+	Fixed bug regarding addr increments.
+
 2004-09-29  Bas Wijnen  <b.wijnen@phys.rug.nl>
 
 	* z80asm.c: added global variable labelprefix.

@@ -43,6 +43,7 @@ ixh, ixl, iyh and iyl can be used.
 Assembler directives are:
 defb and db	arg,arg,arg,...
 defw and dw	arg,arg,arg,...
+defm and dm	"String"
 defs and ds	count,value=0
 org		address
 if		expression
@@ -58,8 +59,9 @@ include		'file'
 			\, ~, $, etc are passed as written (which means ~
 			will not be your home directory.)
 
-defb/db can also take strings, when enclosed in double quotes:
-defb	"This text should be in a buffer", 0
+defb/db and defm/dm are really aliases; either can take either
+double-quoted strings or numbers:
+	defb	"This text should be in a buffer", 0
 
 All expressions can use the following operators, in order of precedence:
 (a, b and c denote subexpressions)
