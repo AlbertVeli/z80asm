@@ -1,3 +1,10 @@
+2004-10-01  Bas Wijnen  <b.wijnen@phys.rug.nl>
+
+	* z80asm (rd_comma): Fixed possible buffer overflow.
+	* z80asm (parse_commandline): Improved --help output.
+	* z80asm (new_reference): Removed useless ++.
+	* z80asm (wrt_ref, assemble): Improved list output for ds.
+
 2004-10-01  H. Peter Anvin  <hpa@users.sourceforge.net>
 
 	* z80asm.c (enum mnemonic, mnemonics, assemble): Added dm/defm as an

@@ -202,6 +202,7 @@ rd_comma (const char **p)
     {
       printerr ("`,' expected. Remainder of line: %s.\n", *p);
       errors++;
+      return;
     }
   *p = delspc ((*p) + 1);
 }
@@ -324,10 +325,10 @@ parse_commandline (int argc, char **argv)
 		  "-V\t--version\tDisplay version information and exit.\n"
 		  "-v\t--verbose\tBe verbose.  "
 		  "Specify again to be more verbose.\n"
-		  "-l\t--list\tWrite a list file.\n"
-		  "-L\t--label\tWrite a label file.\n"
-		  "-p\t-label-prefix\tprefix all labels with this prefix.\n"
-		  "-i\t--input\tSpecify an input file (-i may be omitted).\n"
+		  "-l\t--list\t\tWrite a list file.\n"
+		  "-L\t--label\t\tWrite a label file.\n"
+		  "-p\t--label-prefix\tprefix all labels with this prefix.\n"
+		  "-i\t--input\t\tSpecify an input file (-i may be omitted).\n"
 		  "-o\t--output\tSpecify the output file.\n"
 		  "Please send bug reports and feature requests to "
 		  "<b.wijnen@phys.rug.nl>\n", argv[0]);
@@ -1189,7 +1190,7 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
       tmp->count = ds_count;
       tmp->line = line;
       tmp->infile = file;
-      tmp->comma = comma++;
+      tmp->comma = comma;
       tmp->oseekpos = opos;
       tmp->lseekpos = lpos;
       tmp->delimiter = delimiter;
@@ -1793,7 +1794,11 @@ wrt_ref (int val, int type, int count)
       write_one_byte (val & 0xff, 1);
       return;
     case TYPE_DS:
-      if (havelist) fprintf (listfile, " %02x...", val & 0xff);
+      if (havelist)
+	{
+	  fprintf (listfile, " %02x...", val & 0xff);
+	  listdepth += 6;
+	}
       while (count--)
 	{
 	  write_one_byte (val & 0xff, 0);
@@ -2551,8 +2556,11 @@ assemble (void)
 		  new_reference (readbyte, TYPE_DS, '\0', r);
 		  break;
 		}
-	      if (havelist) fprintf (listfile, " 00...");
-	      listdepth += 6;
+	      if (havelist)
+		{
+		  fprintf (listfile, " 00...");
+		  listdepth += 6;
+		}
 	      for (i = 0; i < r; i++)
 		{
 		  write_one_byte (0, 0);
