@@ -1,3 +1,11 @@
+2004-09-28  H. Peter Anvin  <hpa@users.sourceforge.net>
+
+	* z80asm.c (rd_number): Added ouput parameter endptr.  Changed all
+	callers.
+	* z80asm.c (rd_value): Added support for Zilog-style base
+	specification.
+	* README: Updated documentation.
+
 2004-09-22  Bas Wijnen  <b.wijnen@phys.rug.nl>
 
 	* z80asm.c (assemble): Bugfixes to make ld (nn),a and ld sp,nn work.

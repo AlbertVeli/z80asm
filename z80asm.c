@@ -589,7 +589,7 @@ wrtb (int b)
  */
 
 static int
-rd_number (const char **p, int base)
+rd_number (const char **p, const char **endp, int base)
 {
   int result = 0, i;
   char *c, num[] = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -606,6 +606,8 @@ rd_number (const char **p, int base)
       result = result * base + i;
       (*p)++;
     }
+  if ( endp )
+    *endp = *p;
   *p = delspc (*p);
   if (verbose >= 5)
     fprintf (stderr, "%5d (%04x): rd_number returned %d (%04X).\n",
@@ -636,8 +638,8 @@ rd_otherbasenumber (const char **p)
   c = **p;
   (*p)++;
   if (isalpha (**p))
-    return rd_number (p, tolower (c) - 'a' + 1);
-  return rd_number (p, c - '0' + 1);
+    return rd_number (p, NULL, tolower (c) - 'a' + 1);
+  return rd_number (p, NULL, c - '0' + 1);
 }
 
 static int
@@ -790,7 +792,8 @@ rd_label (const char **p, int *exists)
 static int
 rd_value (const char **p, int *valid)
 {
-  int sign = 1, not = 0;
+  int sign = 1, not = 0, base, v;
+  const char *p0, *p1, *p2;
   if (verbose >= 4)
     fprintf (stderr, "%5d (%04x): Starting to read value (string=%s).\n", line,
 	     addr, *p);
@@ -804,6 +807,7 @@ rd_value (const char **p, int *valid)
       (*p)++;
       *p = delspc (*p);
     }
+  base = 10;			/* Default base for suffixless numbers */
   switch (**p)
     {
       int exist;
@@ -814,9 +818,10 @@ rd_value (const char **p, int *valid)
       if ((*p)[1] == 'x')
 	{
 	  (*p)+=2;
-	  return not ^ (sign * rd_number (p, 0x10));
+	  return not ^ (sign * rd_number (p, NULL, 0x10));
 	}
-      return not ^ (sign * rd_number (p, 8));
+      base = 8;			/* If first digit it 0, assume octal unless suffix */
+      /* fall through */
     case '1':
     case '2':
     case '3':
@@ -826,13 +831,45 @@ rd_value (const char **p, int *valid)
     case '7':
     case '8':
     case '9':
-      return not ^ (sign * rd_number (p, 10));
+      p0 = *p;
+      rd_number(p, &p1, 36);	/* Advance to end of numeric string */
+      p1--;			/* Last character in numeric string */
+      switch ( *p1 )
+	{
+	case 'h':
+	case 'H':
+	  base = 16;
+	  break;
+	case 'b':
+	case 'B':
+	  base = 2;
+	  break;
+	case 'o':
+	case 'O':
+	case 'q':
+	case 'Q':
+	  base = 8;
+	  break;
+	case 'd':
+	case 'D':
+	  base = 10;
+	  break;
+	default:		/* No suffix */
+	  p1++;
+	  break;
+	}
+      v = rd_number(&p0, &p2, base);
+      if ( p1 != p2 ) {
+	printerr("invalid character in number: \'%c\'\n", *p2);
+	errors++;
+      }
+      return not ^ (sign * v);
     case '$':
       (*p)++;
       return not ^ (sign * addr);
     case '%':
       (*p)++;
-      return not ^ (sign * rd_number (p, 2) );
+      return not ^ (sign * rd_number (p, NULL, 2) );
     case '\'':
       return not ^ (sign * rd_character (p) );
     case '@':
