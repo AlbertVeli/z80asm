@@ -17,12 +17,15 @@
 
 CC = gcc
 LDFLAGS = -O5 -Wall
-CFLAGS = -O5 -Wall -Wwrite-strings -Wcast-qual -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Werror -pedantic-errors -ansi -Wshadow -g -W
+CFLAGS = -O5 -Wall -Wwrite-strings -Wcast-qual -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Werror -pedantic-errors -ansi -Wshadow -g -W -Ignulib
 
 all:z80asm
 
-z80asm:z80asm.c Makefile
-	$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@
+z80asm:z80asm.c Makefile gnulib/getopt.o gnulib/getopt1.o
+	$(CC) $(CFLAGS) $(LDFLAGS) $< gnulib/getopt.o gnulib/getopt1.o -o $@
+
+gnulib/%.o:gnulib/%.c gnulib/getopt.h Makefile
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -f a.bin a.out core *~ \#* z80asm

@@ -24,8 +24,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <stdarg.h>
-#include <unistd.h>
-#include <getopt.h>
+#include "getopt.h"
 
 /* defines which are not function-specific */
 #ifndef BUFLEN
