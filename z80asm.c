@@ -1,11 +1,11 @@
 /* Z80 assembler by shevek
 
-   Copyright (C) 2002-2003 Bas Wijnen <b.wijnen@phys.rug.nl>
+   Copyright (C) 2002-2004 Bas Wijnen <b.wijnen@phys.rug.nl>
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
-   See the file named COPYING for more details.
+   This program is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License
+   as published by the Free Software Foundation; either version 2
+   of the License, or (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -335,9 +335,11 @@ parse_commandline (int argc, char **argv)
 		  "<b.wijnen@phys.rug.nl>.\n"
 		  "This program comes with ABSOLUTELY NO WARRANTY.\n"
 		  "You may distribute copies of the program under the terms\n"
-		  "of the GNU General Public License version 2 (and perhaps\n"
-		  "a later version).  For more information about these\n"
-		  "matters, see the file named COPYING.\n");
+		  "of the GNU General Public License as published by\n"
+		  "the Free Software Foundation; either version 2 of the\n"
+		  "License, or (at your option) any later version.\n\n"
+		  "For more information about these matters, see the file\n"
+		  "named COPYING.\n");
 	  exit (0);
 	case 'v':
 	  verbose++;
