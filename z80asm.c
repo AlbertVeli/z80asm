@@ -17,7 +17,7 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#define VERSION "0.1"
+#define VERSION "0.2"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
