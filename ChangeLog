@@ -1,3 +1,8 @@
+2004-09-29  H. Peter Anvin  <hpa@users.sourceforge.net>
+
+	* Makefile: Fixed "make clean", removed -Werror for cygwin.
+	* z80asm.c (rd_out): implemented out (c),0.
+
 2004-09-28  H. Peter Anvin  <hpa@users.sourceforge.net>
 
 	* z80asm.c (rd_number): Added ouput parameter endptr.  Changed all

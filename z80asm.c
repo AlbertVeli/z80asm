@@ -1290,7 +1290,7 @@ rd_in (const char **p)
 static int
 rd_out (const char **p)
 {
-  const char *list[] = {"b", "c", "d", "e", "h", "l", "", "a", NULL};
+  const char *list[] = {"b", "c", "d", "e", "h", "l", "0", "a", NULL};
   return indx (p, list, 1);
 }
 

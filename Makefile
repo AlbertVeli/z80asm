@@ -16,8 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 CC = gcc
-LDFLAGS = -O5 -Wall
-CFLAGS = -O5 -Wall -Wwrite-strings -Wcast-qual -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -Werror -pedantic-errors -ansi -Wshadow -g -W -Ignulib
+LDFLAGS = -O2 -Wall
+CFLAGS = -O2 -Wall -Wwrite-strings -Wcast-qual -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -pedantic -ansi -Wshadow -g -W -Ignulib
 
 all:z80asm
 
@@ -29,9 +29,9 @@ gnulib/%.o:gnulib/%.c gnulib/getopt.h Makefile
 
 clean:
 	for i in . gnulib ; do \
-		rm -f $i/a.bin $i/a.out $i/core $i/*~ $i/\#* $i/*.o ; \
+		rm -f $$i/a.bin $$i/a.out $$i/core $$i/*~ $$i/\#* $$i/*.o ; \
 	done
-	rm -f z80asm
+	rm -f z80asm z80asm.exe
 
 dist: clean
 	rm -rf /tmp/z80asm
