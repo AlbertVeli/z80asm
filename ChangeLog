@@ -1,3 +1,7 @@
+2004-09-22  Bas Wijnen  <b.wijnen@phys.rug.nl>
+
+	* z80asm.c (assemble): Bugfixes to make ld (nn),a and ld sp,nn work.
+
 2003-11-19  Bas Wijnen  <b.wijnen@phys.rug.nl>
 
 	* z80asm.c: Changed expression handling, bugfixes.

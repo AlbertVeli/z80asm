@@ -2154,7 +2154,7 @@ assemble (void)
 		    break;
 		  if (r == ld_nnA || r == ld_nnHL)
 		    {
-		      wrtb (0x22 + 0x10 * (r == A));
+		      wrtb (0x22 + 0x10 * (r == ld_nnA));
 		      write_word ();
 		      break;
 		    }
@@ -2230,6 +2230,7 @@ assemble (void)
 		    {
 		      wrtb (0x31);
 		      write_word ();
+		      break;
 		    }
 		  wrtb (0xED);
 		  wrtb (0x7B);
