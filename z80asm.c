@@ -68,7 +68,7 @@ enum filetype
 struct reference
 {
   struct reference *next, *prev;
-  enum reftype type;		/* TYPE_RST,TYPE_ABSW,TYPE_ABSB,>=0 is relb */
+  enum reftype type;		/* type of reference */
   long oseekpos;		/* position in outfile for data */
   long lseekpos;		/* position in listfile for data */
   char delimiter;		/* delimiter for parser */
@@ -132,6 +132,8 @@ static struct name *firstname = NULL;
 /* files */
 static FILE *realoutputfile, *outfile, *listfile, *labelfile;
 static struct infile *infile;
+/* prefix for labels in labelfile */
+static const char *labelprefix = "";
 /* bools to see if files are opened */
 static int havelist = 0, label = 0;
 /* number of infiles in array */
@@ -149,8 +151,7 @@ static int listdepth;
 static int writebyte;
 static const char *readbyte;
 /* variables which are filled by rd_* functions and used later,
- * like readbyte
- */
+ * like readbyte */
 static const char *readword, *indexjmp, *bitsetres;
 
 /* 0, 0xdd or 0xfd depening on which index prefix should be given */
@@ -305,9 +306,10 @@ parse_commandline (int argc, char **argv)
     {"list", required_argument, NULL, 'l'},
     {"label", required_argument, NULL, 'L'},
     {"input", required_argument, NULL, 'i'},
-    {"output", required_argument, NULL, 'o'}
+    {"output", required_argument, NULL, 'o'},
+    {"label-prefix", required_argument, NULL, 'p'}
   };
-  const char *short_opts = "hVvl:L:i:o:";
+  const char *short_opts = "hVvl:L:i:o:p:";
   int done = 0, i, out = 0;
   infile = NULL;
   while (!done)
@@ -324,6 +326,7 @@ parse_commandline (int argc, char **argv)
 		  "Specify again to be more verbose.\n"
 		  "-l\t--list\tWrite a list file.\n"
 		  "-L\t--label\tWrite a label file.\n"
+		  "-p\t-label-prefix\tprefix all labels with this prefix.\n"
 		  "-i\t--input\tSpecify an input file (-i may be omitted).\n"
 		  "-o\t--output\tSpecify the output file.\n"
 		  "Please send bug reports and feature requests to "
@@ -361,6 +364,9 @@ parse_commandline (int argc, char **argv)
 	case 'L':
 	  labelfile = openfile (&label, "label file", NULL, optarg, "w");
 	  if (verbose > 2) fprintf (stderr, "Opened label file\n");
+	  break;
+	case 'p':
+	  labelprefix = optarg;
 	  break;
 	case -1:
 	  done = 1;
@@ -2707,7 +2713,8 @@ assemble (void)
 	      errors++;
 	      continue;
 	    }
-	  fprintf (labelfile, "%s:\tequ %04x\n", l->name, l->value);
+	  fprintf (labelfile, "%s%s:\tequ %04xh\n", labelprefix, l->name,
+		   l->value);
 	}
       fclose (labelfile);
     }

@@ -1,3 +1,9 @@
+2004-09-29  Bas Wijnen  <b.wijnen@phys.rug.nl>
+
+	* z80asm.c: added global variable labelprefix.
+	* z80asm.c (parse_commandline, assemble): Support prefixing labels.
+	* z80asm.c (assemble): fixed bug in label output.
+
 2004-09-29  H. Peter Anvin  <hpa@users.sourceforge.net>
 
 	* Makefile: Fixed "make clean", removed -Werror for cygwin.
