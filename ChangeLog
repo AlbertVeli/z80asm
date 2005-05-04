@@ -1,3 +1,8 @@
+2005-03-11  Bas Wijnen  <shevek@fmf.nl>
+
+	* z80asm.c (rd_r): Fixed index prefix.
+	* z80asm.c (assemble): Fixed register count errors.
+
 2004-10-01  Bas Wijnen  <b.wijnen@phys.rug.nl>
 
 	* z80asm (rd_comma): Fixed possible buffer overflow.

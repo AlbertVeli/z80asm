@@ -1521,7 +1521,7 @@ rd_r (const char **p)
     }
   if (i <= 4)
     {
-      indexed = 0xdd + 0x20 * i > 2;
+      indexed = 0xdd + 0x20 * (i > 2);
       return 6 - (i & 1);
     }
   i -= 4;
@@ -2103,7 +2103,7 @@ assemble (void)
 	      if (!(r = rd_0_2 (&ptr)))
 		break;
 	      wrtb (0xED);
-	      wrtb (0x46 + 8 * r--);
+	      wrtb (0x46 + 8 * --r);
 	      break;
 	    case IN:
 	      if (!(r = rd_in (&ptr)))
@@ -2116,7 +2116,7 @@ assemble (void)
 		  if (r == C)
 		    {
 		      wrtb (0xED);
-		      wrtb (0x40 + 8 * --r);
+		      wrtb (0x40 + 8 * (A - 1));
 		      break;
 		    }
 		  tmp2 = readbyte;
