@@ -1,3 +1,13 @@
+2005-05-10  Bas Wijnen  <shevek@fmf.nl>
+
+	* z80asm.1: New file.
+	* z80asm.c (enum mnemonic, mnemonic, assemble): Support END directive.
+	* z80asm.c (compare, indx, readlabel): Use strncasecmp instead of
+	compare.
+	* z80asm.c (assemble): Fix bug with strings in DEFB.
+	* z80asm.c (assemble): Allow backslash-escapes in DEFB strings.
+	* z80asm.c (rd_character): Allow octal escapes in strings.
+
 2005-03-11  Bas Wijnen  <shevek@fmf.nl>
 
 	* z80asm.c (rd_r): Fixed index prefix.

@@ -1,0 +1,61 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH Z80ASM 1 "May 10, 2005"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+z80asm \- assembler for the Z80 microprocessor
+.SH SYNOPSIS
+.B z80asm
+.RI [ options ] " " [ "files..." ]
+.SH DESCRIPTION
+This manual page documents briefly the
+.B z80asm
+command.
+.PP
+.\" TeX users may be more comfortable with the \fB<whatever>\fP and
+.\" \fI<whatever>\fP escape sequences to invode bold face and italics, 
+.\" respectively.
+\fBz80asm\fP is a program that...
+.SH OPTIONS
+These programs follow the usual GNU command line syntax, with long
+options starting with two dashes (`-').
+.TP
+.B \-h, \-\-help
+Show summary of options and exit.
+.TP
+.B \-V, \-\-version
+Display version information and exit.
+.TP
+.B \-v, \-\-verbose
+Be verbose.  Specify again to be more verbose.
+.TP
+.B \-l, \-\-list
+Write a list file.
+.TP
+.B \-L, \-\-label
+Write a label file.
+.TP
+.B \-p, \-\-label-prefix
+prefix all labels with this prefix.
+.TP
+.B \-i, \-\-input
+Specify an input file (-i may be omitted).
+.TP
+.B \-o, \-\-output
+Specify the output file.  If not specified, stdout is used.
+
+.SH AUTHOR
+z80asm was written by Bas Wijnen <shevek@fmf.nl>.
