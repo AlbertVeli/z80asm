@@ -18,6 +18,8 @@
 CC = gcc
 LDFLAGS = -O2 -Wall
 CFLAGS = -O2 -Wall -Wwrite-strings -Wcast-qual -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -pedantic -ansi -Wshadow -g -W -Ignulib
+SHELL = /bin/bash
+VERSION ?= $(shell echo -n `cat VERSION | cut -d. -f1`. ; echo $$[`cat VERSION | cut -d. -f2` + 1])
 
 all:z80asm
 
@@ -37,4 +39,5 @@ dist: clean
 	rm -rf /tmp/z80asm
 	tar cf - -C .. z80asm | tar xf - -C /tmp
 	find /tmp/z80asm -name CVS | xargs rm -rf
-	tar cvzf ../z80asm-`date +%Y%m%d`00.tar.gz -C /tmp z80asm
+	tar cvzf ../z80asm-$(VERSION).tar.gz -C /tmp z80asm
+	echo $(VERSION) > VERSION
