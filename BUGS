@@ -1,3 +1,0 @@
-known BUGS in shevek's Z80 assembler:
-- out (c),0
-- shift/rotate (i[xy]+d),[bcdehla]

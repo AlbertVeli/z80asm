@@ -1,6 +1,6 @@
 /* Z80 assembler by shevek
 
-   Copyright (C) 2002-2004 Bas Wijnen <b.wijnen@phys.rug.nl>
+   Copyright (C) 2002-2005 Bas Wijnen <shevek@fmf.nl>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
@@ -17,7 +17,6 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#define VERSION "0.3"
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -332,12 +331,12 @@ parse_commandline (int argc, char **argv)
 		  "-i\t--input\t\tSpecify an input file (-i may be omitted).\n"
 		  "-o\t--output\tSpecify the output file.\n"
 		  "Please send bug reports and feature requests to "
-		  "<b.wijnen@phys.rug.nl>\n", argv[0]);
+		  "<shevek@fmf.nl>\n", argv[0]);
 	  exit (0);
 	case 'V':
 	  printf ("Z80 assembler version " VERSION "\n"
-		  "Copyright (C) 2002-2003 Bas Wijnen "
-		  "<b.wijnen@phys.rug.nl>.\n"
+		  "Copyright (C) 2002-2005 Bas Wijnen "
+		  "<shevek@fmf.nl>.\n"
 		  "This program comes with ABSOLUTELY NO WARRANTY.\n"
 		  "You may distribute copies of the program under the terms\n"
 		  "of the GNU General Public License as published by\n"
@@ -518,7 +517,7 @@ write_one_byte (int b, int list)
   putc (b, outfile);
   if (list && havelist)
     {
-      fprintf (listfile, " 0x%02x", b);
+      fprintf (listfile, " %02x", b);
       listdepth += 3;
     }
   addr++;

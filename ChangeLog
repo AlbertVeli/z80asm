@@ -2,6 +2,7 @@
 
 	* Makefile (top level, dist): Use versions instead of dates.
 	* VERSION: New file.
+	* BUGS, NEWS, README: Removed.
 
 2005-05-10  Bas Wijnen  <shevek@fmf.nl>
 

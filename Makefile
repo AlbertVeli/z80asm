@@ -24,7 +24,7 @@ VERSION ?= $(shell echo -n `cat VERSION | cut -d. -f1`. ; echo $$[`cat VERSION |
 all:z80asm
 
 z80asm:z80asm.c Makefile gnulib/getopt.o gnulib/getopt1.o
-	$(CC) $(CFLAGS) $(LDFLAGS) $< gnulib/getopt.o gnulib/getopt1.o -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) -DVERSION=\"$(VERSION)\" $< gnulib/getopt.o gnulib/getopt1.o -o $@
 
 gnulib/%.o:gnulib/%.c gnulib/getopt.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -1,4 +1,0 @@
-List files now include the output in hex.
-defb/db accepts quoted strings in double quotes.
-
-See README for a (hopefully complete) list of features

@@ -65,65 +65,71 @@ sll and sli are equal and can both be used.
 ixh, ixl, iyh and iyl can be used.
 .PP
 Assembler directives are:
-.B defb
-or
-.B db
-arg,arg,arg,...
-.PP
-.B defw
-or
-.B dw
-arg,arg,arg,...
-.PP
-.B defm
-or
-.B dm
-"String",'String'
-.PP
-.B defs
-or
-.B ds
-count, [value]
-.PP
-.B org
-address
-.PP
-.B if
-expression
-.br
-.B else
-.br
-.B else
-.br
-.B ...
-.br
-.B endif	
-.PP
-.B include
-"file"
-.PP
-Note: the quotes around the file for include are
-mandatory, but you can choose the quotes yourself.
-eg, you may use % or even a letter as a quote.
-The filename does not undergo any expansion, so
-\\, ~, $, etc are passed as written (which means ~
-will not be your home directory.)
+.TP
+.BR defb " or " db " arg, arg, arg, ..."
+Define bytes.
+.TP
+.BR defm " or " dm " " "" """String""" "" ", 'String'"
+Define message.  Each character in the string is stored as one byte.  Backslash
+escapes are allowed, as in characters in expressions.  Unlike the argument for
+include, the quotes must really be quotes (but they can be single or double
+quotes.  The closing quote must match the opening quote.)
 .PP
 defb/db and defm/dm are really aliases; either can take either
 quoted strings or numbers:
 .br
 .B defb
-"This text should be in a buffer", 0
-
+"This text should be in a buffer\\n", 0
+.TP
+.BR defw " or " dw " arg, arg, arg, ..."
+Define words.  Each argument is stored as two bytes, the low order byte first.
+.TP
+.BR defs " or " ds " count [, value]"
+Define space.  count bytes are reserved.  Each of them is initialised to the
+specified value, or 0 if no value is specified.
+.TP
+.B end
+End assembly of this source file.  Any remaining lines are copied into the list
+file (if present), but not assembled.
 .PP
+.BR if " expression"
+.br
+code block 1
+.br
+.B else
+.br
+code block 2
+.br
+.B else
+.br
+code block 3
+.br
+.B ...
+.br
+code block n
+.br
+.B endif
+.RS
+Conditionally assemble code.  If expression is not 0, all odd code blocks are
+assembled, if expression is 0, all even blocks are assembled.  Usually only
+one or two code blocks are present.
+.RE
+.TP
+.BR include " 'file'"
+Include file into the source.  The quotes around the file for include are
+mandatory, but you can choose the quotes yourself.  eg, you may use % or even
+a letter as a quote.  The filename does not undergo any expansion, so \\, ~,
+$, etc are passed as written (which means ~ will not be your home directory.)
+.TP
+.BR org " address"
+Set the "program counter" to address.  This does not add any bytes to the
+resulting binary, it only determines how the rest of the code is interpreted
+(in particular, the value of labels and
+.BR $ ).
+
+.SH EXPRESSIONS
 All expressions can use the following operators, in order of precedence:
-(
-.B a
-, 
-.B b
-and 
-.B c
-denote subexpressions)
+.RB ( a ", " b " and " c " denote subexpressions)"
 .TP
 .B a ? b : c
 If a is not zero, return b, otherwise c
@@ -201,6 +207,10 @@ defined labels may be used.  This is the case for:
 \- The argument of if
 .PP
 In all other expression, labels which are defined later may be used.
+
+.SH EXIT STATUS
+At successful compilation, no output is produced and 0 is returned.  At any
+error, there is output on the standard error and 1 is returned.
 
 .SH NOTES
 Parts that are not compiled because of an if statement are only
