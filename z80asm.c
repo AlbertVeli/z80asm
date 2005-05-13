@@ -44,7 +44,7 @@ enum mnemonic {
   OUT,POP,RES,RET,RLA,RLC,RLD,RRA,RRC,RRD,RST,SBC,SCF,SET,SLA,SLL,SLI,SRA,SRL,
   SUB,XOR,ORG,
   CP,DI,EI,EX,IM,IN,JP,JR,LD,OR,RL,RR,DB,DW,DS,DM,
-  INCLUDE,IF,ELSE,ENDIF,END
+  INCLUDE,BININCLUDE,IF,ELSE,ENDIF,END
 };
 
 /* types of reference */
@@ -112,6 +112,13 @@ struct name
   char name[1];
 };
 
+/* the include path */
+struct includedir
+{
+  struct includedir *next;
+  char name[1];
+};
+
 /* global variables */
 /* mnemonics, used as argument to indx() in assemble */
 const char *mnemonics[]={
@@ -121,13 +128,15 @@ const char *mnemonics[]={
   "inc","ind","ini","ldd","ldi","neg","nop","out","pop","res","ret","rla",
   "rlc","rld","rra","rrc","rrd","rst","sbc","scf","set","sla","sll","sli",
   "sra","srl","sub","xor","org","cp","di","ei","ex","im","in","jp","jr","ld",
-  "or","rl","rr","db","dw","ds","dm","include","if","else","endif","end",NULL
+  "or","rl","rr","db","dw","ds","dm","include","bininclude","if","else",
+  "endif","end",NULL
 };
 
 /* linked lists */
 static struct reference *firstreference = NULL;
 static struct label *firstlabel = NULL, *lastlabel = NULL;
 static struct name *firstname = NULL;
+static struct includedir *firstincludedir = NULL;
 
 /* files */
 static FILE *realoutputfile, *outfile, *listfile, *labelfile;
@@ -178,7 +187,7 @@ printerr (const char *fmt, ...)
 {
   va_list l;
   va_start (l, fmt);
-  fprintf (stderr, "%s:%5d (%04X): ", infile[file].name, line, addr);
+  fprintf (stderr, "%s:%d: ", infile[file].name, line);
   vfprintf (stderr, fmt, l);
   va_end (l);
 }
@@ -261,7 +270,7 @@ openfile (int *done, /* flag to check that a file is opened only once. */
       exit (1);
     }
   *done = 1;
-  if (def && name && name[0] == '-' && name[1] == 0)
+  if (def && (!name || (name[0] == '-' && name[1] == 0)))
     {
       return def;
     }
@@ -277,6 +286,35 @@ openfile (int *done, /* flag to check that a file is opened only once. */
       exit (1);
     }
   return retval;
+}
+
+/* open an included file, searching the path */
+static FILE *
+open_include_file (const char *name)
+{
+  FILE *result;
+  struct includedir *i;
+  /* always try the current directory first */
+  result = fopen (name, "r");
+  if (result)
+    return result;
+  for (i = firstincludedir; i != NULL; i = i->next)
+    {
+      char *tmp = malloc (strlen (i->name) + strlen (name) + 1);
+      if (!tmp)
+	{
+	  printerr ("Not enough memory trying to open include file.\n");
+	  errors++;
+	  return NULL;
+	}
+      strcpy (tmp, i->name);
+      strcat (tmp, name);
+      result = fopen (tmp, "r");
+      free (tmp);
+      if (result)
+	return result;
+    }
+  return NULL;
 }
 
 /* queue a file to be opened for reading */
@@ -296,6 +334,24 @@ open_infile (const char *name)
   infilecount++;
 }
 
+/* add a directory to the include search path */
+static void
+add_include (const char *name)
+{
+  struct includedir *i;
+  i = malloc (sizeof (struct includedir) + strlen (name) + 1);
+  if (!i)
+    {
+      fprintf (stderr, "Error: insufficient memory\n");
+      exit (1);
+    }
+  strcpy (i->name, name);
+  if (name[strlen (name) - 1] != '/')
+    strcat (i->name, "/");
+  i->next = firstincludedir;
+  firstincludedir = i;
+}
+
 /* parse commandline arguments */
 static void
 parse_commandline (int argc, char **argv)
@@ -304,20 +360,22 @@ parse_commandline (int argc, char **argv)
     {"help", no_argument, NULL, 'h'},
     {"version", no_argument, NULL, 'V'},
     {"verbose", no_argument, NULL, 'v'},
-    {"list", required_argument, NULL, 'l'},
-    {"label", required_argument, NULL, 'L'},
+    {"list", optional_argument, NULL, 'l'},
+    {"label", optional_argument, NULL, 'L'},
     {"input", required_argument, NULL, 'i'},
     {"output", required_argument, NULL, 'o'},
-    {"label-prefix", required_argument, NULL, 'p'}
+    {"label-prefix", required_argument, NULL, 'p'},
+    {"includepath", required_argument, NULL, 'I'}
   };
-  const char *short_opts = "hVvl:L:i:o:p:";
+  const char *short_opts = "hVvl::L::i:o:p:I:";
   int done = 0, i, out = 0;
   infile = NULL;
   while (!done)
     {
       switch (getopt_long (argc, argv, short_opts, opts, NULL) )
 	{
-	case 'h':	
+	case 'h':
+	  /* split in two, to avoid too long string constant */
 	  printf ("Usage: %s [options] [input files]\n"
 		  "\n"
 		  "Possible options are:\n"
@@ -326,12 +384,13 @@ parse_commandline (int argc, char **argv)
 		  "-v\t--verbose\tBe verbose.  "
 		  "Specify again to be more verbose.\n"
 		  "-l\t--list\t\tWrite a list file.\n"
-		  "-L\t--label\t\tWrite a label file.\n"
-		  "-p\t--label-prefix\tprefix all labels with this prefix.\n"
+		  "-L\t--label\t\tWrite a label file.\n", argv[0]);
+	  printf ("-p\t--label-prefix\tprefix all labels with this prefix.\n"
 		  "-i\t--input\t\tSpecify an input file (-i may be omitted).\n"
 		  "-o\t--output\tSpecify the output file.\n"
+		  "-I\t--includepath\tAdd a directory to the include path.\n"
 		  "Please send bug reports and feature requests to "
-		  "<shevek@fmf.nl>\n", argv[0]);
+		  "<shevek@fmf.nl>\n");
 	  exit (0);
 	case 'V':
 	  printf ("Z80 assembler version " VERSION "\n"
@@ -359,15 +418,18 @@ parse_commandline (int argc, char **argv)
 	  open_infile (optarg);
 	  break;
 	case 'l':
-	  listfile = openfile (&havelist, "list file", NULL, optarg, "w");
+	  listfile = openfile (&havelist, "list file", stderr, optarg, "w");
 	  if (verbose > 2) fprintf (stderr, "Opened list file\n");
 	  break;
 	case 'L':
-	  labelfile = openfile (&label, "label file", NULL, optarg, "w");
+	  labelfile = openfile (&label, "label file", stderr, optarg, "w");
 	  if (verbose > 2) fprintf (stderr, "Opened label file\n");
 	  break;
 	case 'p':
 	  labelprefix = optarg;
+	  break;
+	case 'I':
+	  add_include (optarg);
 	  break;
 	case -1:
 	  done = 1;
@@ -1842,6 +1904,43 @@ wrt_ref (int val, int type, int count)
     }
 }
 
+static char *
+get_include_name (const char **ptr)
+{
+  int pos = 0;
+  char quote;
+  char *name;
+  *ptr = delspc (*ptr);
+  name = malloc (strlen (*ptr) + 1);
+  if (!name)
+    {
+      printerr ("Unable to allocate memory for filename %s\n", *ptr);
+      errors++;
+      return NULL;
+    }
+  if (!**ptr)
+    {
+      printerr ("include without filename\n");
+      free (name);
+      errors++;
+      return NULL;
+    }
+  quote = *(*ptr)++;
+  while (**ptr != quote)
+    {
+      if (!**ptr)
+	{
+	  printerr ("filename without closing quote (%c)\n", quote);
+	  free (name);
+	  errors++;
+	  return NULL;
+	}
+      name[pos++] = *(*ptr)++;
+    }
+  name[pos] = 0;
+  return name;
+}
+
 /* do the actual work */
 static void
 assemble (void)
@@ -1928,7 +2027,7 @@ assemble (void)
 	  ptr = buffer;
 	  lastlabel = NULL;
 	  baseaddr = addr;
-	  line++;
+	  line = ++stack[sp].line;
 	  ptr = delspc (ptr);
 	  if (!*ptr) continue;
 	  if (!noifcount) readlabel (&ptr);
@@ -2626,47 +2725,25 @@ assemble (void)
 		    }
 		  break;
 		}
-	      ptr = delspc (ptr);
 	      {
-		int pos = 0;
-		char quote;
-		struct name *nm,
-		  *name = malloc (sizeof (struct name) + strlen (ptr));
+		struct name *name;
+		char *nm = get_include_name (&ptr);
+		if (!nm)
+		  break;
+		name = malloc (sizeof (struct name) + strlen (nm));
 		if (!name)
 		  {
-		    printerr ("Unable to allocate memory for filename %s\n",
-			      name);
+		    printerr ("Out of memory while allocating name.\n");
+		    free (nm);
 		    errors++;
 		    break;
 		  }
-		if (*ptr == ';' || !*ptr)
-		  {
-		    printerr ("include without filename\n");
-		    free (name);
-		    errors++;
-		    break;
-		  }
-		quote = *ptr++;
-		while (*ptr != quote)
-		  {
-		    if (!*ptr)
-		      {
-			printerr ("filename without closing quote (%c)\n",
-				  quote);
-			free (name);
-			errors++;
-			break;
-		      }
-		    name->name[pos++] = *ptr++;
-		  }
-		name->name[pos] = 0;
-		nm =
-		  realloc (name, sizeof (struct name) + strlen (name->name));
-		if (nm) name = nm;
+		strcpy (name->name, nm);
+		free (nm);
 		sp++;
 		stack[sp].name = name->name;
 		stack[sp].line = 0;
-		stack[sp].file = fopen (name->name, "r");
+		stack[sp].file = open_include_file (name->name);
 		if (!stack[sp].file)
 		  {
 		    printerr ("Unable to open file %s: %s\n",
@@ -2684,6 +2761,39 @@ assemble (void)
 		  fprintf (stderr, "Reading file %s\n", name->name);
 	      }
 	      break;
+	    case BININCLUDE:
+	      {
+		FILE *incfile;
+		char *name = get_include_name (&ptr);
+		if (!name)
+		  break;
+		incfile = open_include_file (name);
+		if (!incfile)
+		  {
+		    printerr ("Unable to open binary file %s.\n", name);
+		    free (name);
+		    errors++;
+		    break;
+		  }
+		while (1)
+		  {
+		    char filebuffer[4096];
+		    size_t num = fread (filebuffer, 1, 4096, incfile);
+		    if (num == 0)
+		      break;
+		    if (num != fwrite (filebuffer, 1, num, outfile) )
+		      {
+			printerr ("Error including binary file %s: %s.\n",
+				  name, strerror (errno) );
+			errors++;
+			break;
+		      }
+		    addr += num;
+		  }
+		fclose (incfile);
+		free (name);
+		break;
+	      }
 	    case IF:
 	      if (rd_expr (&ptr, '\0', NULL)) ifcount++; else noifcount++;
 	      break;
@@ -2811,6 +2921,8 @@ assemble (void)
 int
 main (int argc, char **argv)
 {
+  /* default include file location */
+  add_include ("/usr/share/z80asm/headers/");
   parse_commandline (argc, argv);
   assemble ();
   if (errors)

@@ -41,20 +41,26 @@ Display version information and exit.
 .B \-v, \-\-verbose
 Be verbose.  Specify again to be more verbose.
 .TP
-.B \-l, \-\-list
+.BR "\-l, \-\-list" [=filename]
 Write a list file.
 .TP
-.B \-L, \-\-label
+.BR "\-L, \-\-label" [=filename]
 Write a label file.
 .TP
-.B \-p, \-\-label\-prefix
+.BR "\-p, \-\-label\-prefix" =prefix
 prefix all labels with this prefix.
 .TP
-.B \-i, \-\-input
+.BR "\-i, \-\-input" =filename
 Specify an input file (\-i may be omitted).
 .TP
-.B \-o, \-\-output
+.BR "\-o, \-\-output" =filename
 Specify the output file.
+.TP
+.BR "\-I, \-\-includepath" =dirname
+Add a directory to the include path.  The order in which the directories are
+tried is from back to front: the last directory specified has the highest
+priority.  "/usr/share/z80asm" is always in the include path (with lowest
+priority), you don't have to specify it.
 
 .SH COMPILER DIRECTIVES
 All mnemonics and registers are case insensitive.
@@ -65,6 +71,13 @@ sll and sli are equal and can both be used.
 ixh, ixl, iyh and iyl can be used.
 .PP
 Assembler directives are:
+.TP
+.BR bininclude " 'filename'"
+Include a binary file into the resulting assembled file.  This can be used to
+include text files, or images, sound files, etc.  The filename is searched for
+in the current directory, and then in the include path, just like for include.
+Also like for include, the quotes can be any character (but must match) and
+no substitution is performed (so ~ is not your home directory).
 .TP
 .BR defb " or " db " arg, arg, arg, ..."
 Define bytes.
@@ -78,15 +91,14 @@ quotes.  The closing quote must match the opening quote.)
 defb/db and defm/dm are really aliases; either can take either
 quoted strings or numbers:
 .br
-.B defb
-"This text should be in a buffer\\n", 0
-.TP
-.BR defw " or " dw " arg, arg, arg, ..."
-Define words.  Each argument is stored as two bytes, the low order byte first.
+defb "This text should be in a buffer\\r\\n", 0
 .TP
 .BR defs " or " ds " count [, value]"
 Define space.  count bytes are reserved.  Each of them is initialised to the
 specified value, or 0 if no value is specified.
+.TP
+.BR defw " or " dw " arg, arg, arg, ..."
+Define words.  Each argument is stored as two bytes, the low order byte first.
 .TP
 .B end
 End assembly of this source file.  Any remaining lines are copied into the list
@@ -120,6 +132,7 @@ Include file into the source.  The quotes around the file for include are
 mandatory, but you can choose the quotes yourself.  eg, you may use % or even
 a letter as a quote.  The filename does not undergo any expansion, so \\, ~,
 $, etc are passed as written (which means ~ will not be your home directory.)
+The filename is used as specified, and then prefixed with each directory in the include path, until it can be opened.
 .TP
 .BR org " address"
 Set the "program counter" to address.  This does not add any bytes to the

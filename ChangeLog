@@ -1,3 +1,17 @@
+2005-05-13  Bas Wijnen  <shevek@fmf.nl>
+
+	* examples/Makefile, examples/hello.asm, headers/msx-bios.asm,
+	headers/msx2-bios.asm, headers/msx2+-bios.asm,
+	headers/msxturbor-bios.asm: New files.
+	* z80asm.c (struct includedir, firstincludedir, open_include_file,
+	add_include, parse_commandline, assemble, main): Use include path.
+	* z80asm (parse_commandline): Make stderr default for list and label
+	files.
+	* z80asm.c (enum mnemonic, mnemonics, get_include_name, assemble): Add
+	bininclude directive.
+	* z80asm.c (printerr, assemble): Make error output parsable.
+	* z80asm.1: Updated.
+
 2005-05-11  Bas Wijnen  <shevek@fmf.nl>
 
 	* Makefile (top level, dist): Use versions instead of dates.

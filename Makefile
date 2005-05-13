@@ -31,7 +31,7 @@ gnulib/%.o:gnulib/%.c gnulib/getopt.h Makefile
 
 clean:
 	for i in . gnulib ; do \
-		rm -f $$i/a.bin $$i/a.out $$i/core $$i/*~ $$i/\#* $$i/*.o ; \
+		rm -f $$i/core $$i/*~ $$i/\#* $$i/*.o $$i/*.rom ; \
 	done
 	rm -f z80asm z80asm.exe
 

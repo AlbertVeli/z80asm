@@ -1,0 +1,11 @@
+	include 'msx-bios.asm'
+SUBROM:	equ 0x015C
+EXTROM:	equ 0x015F
+CHKSLZ:	equ 0x0162
+CHKNEW:	equ 0x0165
+EOL:	equ 0x0168
+BIGFIL:	equ 0x016B
+NSETRD:	equ 0x016E
+NSTWRT:	equ 0x0171
+NRDVRM:	equ 0x0174
+NWRVRM:	equ 0x0177
