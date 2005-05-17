@@ -30,14 +30,15 @@ gnulib/%.o:gnulib/%.c gnulib/getopt.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	for i in . gnulib ; do \
+	for i in . gnulib examples headers ; do \
 		rm -f $$i/core $$i/*~ $$i/\#* $$i/*.o $$i/*.rom ; \
 	done
 	rm -f z80asm z80asm.exe
 
 dist: clean
-	rm -rf /tmp/z80asm
+	echo $(VERSION) > VERSION
+	rm -rf /tmp/z80asm-$(VERSION) /tmp/z80asm
 	tar cf - -C .. z80asm | tar xf - -C /tmp
 	find /tmp/z80asm -name CVS | xargs rm -rf
-	tar cvzf ../z80asm-$(VERSION).tar.gz -C /tmp z80asm
-	echo $(VERSION) > VERSION
+	mv /tmp/z80asm /tmp/z80asm-$(VERSION)
+	tar cvzf ../z80asm-$(VERSION).tar.gz -C /tmp z80asm-$(VERSION)

@@ -1,3 +1,14 @@
+2005-05-17  Bas Wijnen  <shevek@fmf.nl>
+
+	* Makefile (clean): Clean examples and headers.
+	* Makefile (dist): Make versioned tarballs.
+	* z80asm.c (buffer, try_use_real_file, flush_to_real_file,
+	parse_commandline, assemble): Generalise writing to non-seekable
+	files.
+	* z80asm.c (reallistfile, parse_commandline, assemble): Use it for
+	list file.
+	* z80asm.c (read_line, assemble): Remove arbitrary line length limit.
+
 2005-05-13  Bas Wijnen  <shevek@fmf.nl>
 
 	* examples/Makefile, examples/hello.asm, headers/msx-bios.asm,

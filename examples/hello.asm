@@ -1,4 +1,4 @@
-; Hello world.  Load as a cartridge in openmsx.
+; Hello world.  Load as a cartridge in openmsx.  (openmsx hello.rom)
 	include 'msx-bios.asm'	; symbolic names for bios calls
 	; header for a rom
 	org 0x4000
@@ -13,7 +13,7 @@ start:	ld a, 80
 	call CHGMOD	; screen 0
 	ld hl, text
 loop:	ld a, (hl)
-	and a	; set the z flag if A is 0
+	and a		; set the z flag if A is 0
 	jr z,stop	; and return in that case
 	call CHPUT
 	inc hl

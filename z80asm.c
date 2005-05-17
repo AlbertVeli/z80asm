@@ -139,7 +139,7 @@ static struct name *firstname = NULL;
 static struct includedir *firstincludedir = NULL;
 
 /* files */
-static FILE *realoutputfile, *outfile, *listfile, *labelfile;
+static FILE *realoutputfile, *outfile, *reallistfile, *listfile, *labelfile;
 static struct infile *infile;
 /* prefix for labels in labelfile */
 static const char *labelprefix = "";
@@ -179,7 +179,7 @@ static int baseaddr;
 static char mem_delimiter;
 
 /* line currently being parsed */
-static char buffer[BUFLEN];
+static char *buffer;
 
 /* print an error message, including current line and file */
 static void
@@ -352,6 +352,63 @@ add_include (const char *name)
   firstincludedir = i;
 }
 
+static void try_use_real_file (FILE *real, FILE **backup)
+{
+  fpos_t pos;
+  if (fgetpos (real, &pos) == 0)
+    {
+      *backup = real;
+      return;
+    }
+  if (!(*backup = tmpfile ()))
+    {
+      fprintf (stderr, "Error: Unable to open temporary file: %s\n",
+	       strerror (errno));
+      exit (1);
+    }
+}
+
+static void flush_to_real_file (FILE *real, FILE *tmp)
+{
+  int l, size, len = 0;
+  char buf[BUFLEN];
+  if (tmp == real)
+    {
+      fclose (tmp);
+      return;
+    }
+  rewind (tmp);
+  while (1)
+    {
+      clearerr (tmp);
+      errno = 0;
+      len = fread (buf, 1, BUFLEN, tmp);
+      if (len == 0 && feof (tmp))
+	break;
+      if (len <= 0)
+	{
+	  fprintf (stderr, "error reading temp file: %s\n",
+		   strerror (errno));
+	  exit (1);
+	}
+      l = 0;
+      while (l < len)
+	{
+	  clearerr (real);
+	  size = fwrite (&buf[l], 1, len - l, real);
+	  if (size <= 0)
+	    {
+	      fprintf (stderr, "error writing final file: %s\n",
+		       strerror (errno));
+	      exit (1);
+	    }
+	  l += size;
+	}
+    }
+  fclose (tmp);
+  fclose (real);
+}
+
 /* parse commandline arguments */
 static void
 parse_commandline (int argc, char **argv)
@@ -410,15 +467,16 @@ parse_commandline (int argc, char **argv)
 	    fprintf (stderr, "Verbosity increased to level %d\n", verbose);
 	  break;
 	case 'o':
-	  realoutputfile =
-	    openfile (&out, "output file", stdout, optarg, "wb");
+	  realoutputfile
+	    = openfile (&out, "output file", stdout, optarg, "wb");
 	  if (verbose > 2) fprintf (stderr, "Opened outputfile\n");
 	  break;
 	case 'i':
 	  open_infile (optarg);
 	  break;
 	case 'l':
-	  listfile = openfile (&havelist, "list file", stderr, optarg, "w");
+	  reallistfile
+	    = openfile (&havelist, "list file", stderr, optarg, "w");
 	  if (verbose > 2) fprintf (stderr, "Opened list file\n");
 	  break;
 	case 'L':
@@ -443,12 +501,9 @@ parse_commandline (int argc, char **argv)
   if (!infilecount) open_infile ("-");
   if (!out)
     realoutputfile = stdout;
-  if (!(outfile = tmpfile ()))
-    {
-      fprintf (stderr, "Error: Unable to open temporary file: %s\n",
-	       strerror (errno));
-      exit (1);
-    }
+  try_use_real_file (realoutputfile, &outfile);
+  if (havelist)
+    try_use_real_file (reallistfile, &listfile);
 }
 
 /* find any of the list[] entries as the start of ptr and return index */
@@ -1941,6 +1996,47 @@ get_include_name (const char **ptr)
   return name;
 }
 
+static int read_line (FILE *f)
+{
+  static char short_buffer[BUFLEN + 1];
+  unsigned size;
+  if (buffer && buffer != short_buffer)
+    free (buffer);
+  buffer = NULL;
+  if (!fgets (short_buffer, BUFLEN + 1, f) )
+    return 0;
+  if (strlen (short_buffer) < BUFLEN)
+    {
+      buffer = short_buffer;
+      return 1;
+    }
+  size = 2 * BUFLEN;
+  buffer = malloc (size + 1);
+  if (!buffer)
+    {
+      printerr ("Out of memory reading line.\n");
+      return 0;
+    }
+  memcpy (buffer, short_buffer, BUFLEN + 1);
+  while (1)
+    {
+      char *b;
+      if (!fgets (&buffer[size - BUFLEN], BUFLEN + 1, f)
+	  || (buffer[strlen (buffer) - 1] == '\n'))
+	{
+	  return 1;
+	}
+      size += BUFLEN;
+      b = realloc (buffer, size + 1);
+      if (!b)
+	{
+	  printerr ("Out of memory reading line.\n");
+	  return 0;
+	}
+      buffer = b;
+    }
+}
+
 /* do the actual work */
 static void
 assemble (void)
@@ -1976,14 +2072,15 @@ assemble (void)
 	  shouldclose = 1;
 	}
       if (havelist) fprintf (listfile, "# File %s\n", stack[sp].name);
-      buffer[0] = 0;
+      if (buffer)
+	buffer[0] = 0;
       /* loop until this source file is done */
       while (1)
 	{
 	  int cmd, cont = 1;
 	  if (havelist)
 	    {
-	      if (buffer[0] != 0)
+	      if (buffer && buffer[0] != 0)
 		{
 		  int i, tabs;
 		  if (listdepth < 8) tabs = 3;
@@ -1998,14 +2095,14 @@ assemble (void)
 	  /* throw away the rest of the file after end */
 	  if (file_ended)
 	    {
-	      while (fgets (buffer, BUFLEN, stack[sp].file))
+	      while (read_line (stack[sp].file) )
 		{
 		  if (havelist)
 		    fprintf (listfile, "\t\t\t%s\n", buffer);
 		}
 	      file_ended = 0;
 	    }
-	  while (NULL == fgets (buffer, BUFLEN, stack[sp].file))
+	  while (!read_line (stack[sp].file) )
 	    {
 	      if (verbose > 3) fprintf (stderr, "finished reading file %s\n",
 					stack[sp].name);
@@ -2856,7 +2953,6 @@ assemble (void)
 	free (tmp);
       }
   }
-  if (havelist) fclose (listfile);
   if (label)
     {
       /* write all labels */
@@ -2883,38 +2979,9 @@ assemble (void)
       free (firstlabel);
       firstlabel = l;
     }
-  {
-    int l, size, len = 0;
-    rewind (outfile);
-    while (1)
-      {
-	clearerr (outfile);
-	errno = 0;
-	len = fread (buffer, 1, BUFLEN, outfile);
-	if (len == 0 && feof (outfile)) break;
-	if (len <= 0)
-	  {
-	    fprintf (stderr, "error reading temp file: %s\n",
-		     strerror (errno));
-	    exit (1);
-	  }
-	l = 0;
-	while (l < len)
-	  {
-	    clearerr (realoutputfile);
-	    size = fwrite (&buffer[l], 1, len - l, realoutputfile);
-	    if (size <= 0)
-	      {
-		fprintf (stderr, "error writing output file: %s\n",
-			 strerror (errno));
-		exit (1);
-	      }
-	    l += size;
-	  }
-      }
-  }
-  fclose (outfile);
-  fclose (realoutputfile);
+  flush_to_real_file (realoutputfile, outfile);
+  if (havelist)
+    flush_to_real_file (reallistfile, listfile);
   free (infile);
 }
 
