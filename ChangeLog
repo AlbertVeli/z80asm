@@ -8,6 +8,7 @@
 	rd_expr_xor, rd_expr_or, new_reference, wrt_ref, read_line,
 	get_macro_args, assemble): Added macro support.
 	* z80asm.c (rd_value): Added several radix notations.
+	* examples/macro.asm: New file.
 
 2005-05-17  Bas Wijnen  <shevek@fmf.nl>
 
