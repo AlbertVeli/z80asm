@@ -25,6 +25,7 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <getopt.h>
+#include <unistd.h>
 
 /* defines which are not function-specific */
 #ifndef BUFLEN
@@ -142,15 +143,16 @@ struct macro
 /* elements on the file stack */
 struct stack
 {
-  const char *name;     /* filename (for errors). may be malloced */
-  FILE *file;           /* the handle */
-  int line;             /* the current line number (for errors) */
-  int shouldclose;      /* if this file should be closed when done */
-  struct label *labels; /* local labels for this stack level */
+  const char *name;       /* filename (for errors). may be malloced */
+  struct includedir *dir; /* directory where it comes from, if any */
+  FILE *file;             /* the handle */
+  int line;               /* the current line number (for errors) */
+  int shouldclose;        /* if this file should be closed when done */
+  struct label *labels;   /* local labels for this stack level */
   /* if file is NULL, this is a macro entry */
   struct macro *macro;
   struct macro_line *macro_line;
-  char **macro_args;    /* arguments given to the macro */
+  char **macro_args;      /* arguments given to the macro */
 };
 
 /* global variables */
@@ -175,6 +177,7 @@ static struct macro *firstmacro = NULL;
 
 /* files */
 static FILE *realoutputfile, *outfile, *reallistfile, *listfile, *labelfile;
+static const char *realoutputfilename;
 static struct infile *infile;
 /* prefix for labels in labelfile */
 static const char *labelprefix = "";
@@ -229,7 +232,8 @@ printerr (const char *fmt, ...)
 {
   va_list l;
   va_start (l, fmt);
-  fprintf (stderr, "%s:%d: ", infile[file].name, line);
+  fprintf (stderr, "%s%s:%d: ", stack[sp].dir ? stack[sp].dir->name : "",
+	   stack[sp].name, line);
   vfprintf (stderr, fmt, l);
   va_end (l);
   errors++;
@@ -330,14 +334,18 @@ openfile (int *done, /* flag to check that a file is opened only once. */
 
 /* open an included file, searching the path */
 static FILE *
-open_include_file (const char *name)
+open_include_file (const char *name, struct includedir **dir)
 {
   FILE *result;
   struct includedir *i;
   /* always try the current directory first */
   result = fopen (name, "r");
   if (result)
-    return result;
+    {
+      if (dir)
+	*dir = NULL;
+      return result;
+    }
   for (i = firstincludedir; i != NULL; i = i->next)
     {
       char *tmp = malloc (strlen (i->name) + strlen (name) + 1);
@@ -351,7 +359,11 @@ open_include_file (const char *name)
       result = fopen (tmp, "r");
       free (tmp);
       if (result)
-	return result;
+	{
+	  if (dir)
+	    *dir = i;
+	  return result;
+	}
     }
   return NULL;
 }
@@ -415,7 +427,6 @@ flush_to_real_file (FILE *real, FILE *tmp)
   char buf[BUFLEN];
   if (tmp == real)
     {
-      fclose (tmp);
       return;
     }
   rewind (tmp);
@@ -446,8 +457,6 @@ flush_to_real_file (FILE *real, FILE *tmp)
 	  l += size;
 	}
     }
-  fclose (tmp);
-  fclose (real);
 }
 
 /* parse commandline arguments */
@@ -510,6 +519,7 @@ parse_commandline (int argc, char **argv)
 	case 'o':
 	  realoutputfile
 	    = openfile (&out, "output file", stdout, optarg, "wb");
+	  realoutputfilename = optarg;
 	  if (verbose > 2) fprintf (stderr, "Opened outputfile\n");
 	  break;
 	case 'i':
@@ -920,11 +930,19 @@ check_label (struct label *labels, const char **p, struct label **ret,
   const char *c;
   for (l = labels; l; l = l->next)
     {
-      int cmp = strncmp (l->name, *p, strlen (l->name));
-      if (cmp > 0)
-	return 0;
-      c = *p + strlen (l->name);
-      if (cmp < 0 || isalnum (*c) || *c == '_')
+      unsigned s1, s2, s;
+      int cmp;
+      for (c = *p; isalnum (*c) || *c == '_'; ++c) {}
+      s1 = strlen (l->name);
+      s2 = c - *p;
+      s = s1 < s2 ? s1 : s2;
+      cmp = strncmp (l->name, *p, s);
+      if (cmp > 0 || (cmp == 0 && s1 > s) )
+	{
+	  return 0;
+	}
+      c = *p + s;
+      if (cmp < 0 || s2 > s)
 	{
 	  if (previous)
 	    *previous = l;
@@ -940,7 +958,7 @@ check_label (struct label *labels, const char **p, struct label **ret,
 	      /* label was not valid, and isn't computable.  tell the
 	       * caller that it doesn't exist, so it will try again later.
 	       * Set ret to show actual existence.  */
-	      if (verbose >= 4)
+	      /*if (verbose >= 4)*/
 		fprintf (stderr, "%5d (0x%04x): returning invalid label %s.\n",
 			 line, addr, l->name);
 	      *ret = l;
@@ -1073,7 +1091,10 @@ rd_value (const char **p, int *valid, int level)
       p0 = *p;
       v = rd_number (&p0, &p2, 0x10);
       if (p2 == *p)
-	v = baseaddr;
+	{
+	  v = baseaddr;
+	  fprintf (stderr, "baseaddr = %x\n", baseaddr);
+	}
       else
 	*p = p2;
       return not ^ (sign * v);
@@ -2240,6 +2261,7 @@ assemble (void)
       stack[sp].line = 0;
       stack[sp].shouldclose = 0;
       stack[sp].name = infile[file].name;
+      stack[sp].dir = NULL;
       if (infile[file].name[0] == '-' && infile[file].name[1] == 0)
 	{
 	  stack[sp].file = stdin;
@@ -3088,11 +3110,12 @@ assemble (void)
 		  }
 		strcpy (name->name, nm);
 		free (nm);
-		sp++;
+		++sp;
 		stack[sp].name = name->name;
 		stack[sp].shouldclose = 1;
 		stack[sp].line = 0;
-		stack[sp].file = open_include_file (name->name);
+		stack[sp].file = open_include_file (name->name,
+						    &stack[sp].dir);
 		if (!stack[sp].file)
 		  {
 		    printerr ("Unable to open file %s: %s\n",
@@ -3115,7 +3138,7 @@ assemble (void)
 		char *name = get_include_name (&ptr);
 		if (!name)
 		  break;
-		incfile = open_include_file (name);
+		incfile = open_include_file (name, NULL);
 		if (!incfile)
 		  {
 		    printerr ("Unable to open binary file %s.\n", name);
@@ -3255,6 +3278,7 @@ assemble (void)
 			stack[sp].macro = m;
 			stack[sp].macro_line = m->lines;
 			stack[sp].shouldclose = 0;
+			stack[sp].dir = NULL;
 			break;
 		      }
 		  }
@@ -3310,9 +3334,21 @@ assemble (void)
       free (firstlabel);
       firstlabel = l;
     }
-  flush_to_real_file (realoutputfile, outfile);
-  if (havelist && !errors)
-    flush_to_real_file (reallistfile, listfile);
+  if (!errors)
+    {
+      flush_to_real_file (realoutputfile, outfile);
+      if (havelist)
+	flush_to_real_file (reallistfile, listfile);
+    }
+  fclose (outfile);
+  if (outfile != realoutputfile)
+    fclose (realoutputfile);
+  if (havelist)
+    {
+      fclose (listfile);
+      if (listfile != reallistfile)
+	fclose (reallistfile);
+    }
   free (infile);
 }
 
@@ -3329,6 +3365,10 @@ main (int argc, char **argv)
 	fprintf (stderr, "*** 1 error found ***\n");
       else
 	fprintf (stderr, "*** %d errors found ***\n", errors);
+      if (realoutputfile == outfile)
+	{
+	  unlink (realoutputfilename);
+	}
       return 1;
     }
   else return 0;
