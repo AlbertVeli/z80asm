@@ -1,3 +1,14 @@
+2005-05-18  Bas Wijnen  <shevek@fmf.nl>
+
+	* z80asm.c (enum mnemonic, enum reftype, struct reference, struct
+	label, struct stack, struct macro_arg, struct macro_line, struct
+	macro, mnemonics, firstmacro, define_macro, sp, stack, readlabel,
+	rd_expr, compute_ref, check_label, rd_label, rd_value, rd_factor,
+	rd_term, rd_expr_shift, rd_expr_unequal, rd_expr_equal, rd_expr_and,
+	rd_expr_xor, rd_expr_or, new_reference, wrt_ref, read_line,
+	get_macro_args, assemble): Added macro support.
+	* z80asm.c (rd_value): Added several radix notations.
+
 2005-05-17  Bas Wijnen  <shevek@fmf.nl>
 
 	* Makefile (clean): Clean examples and headers.
