@@ -66,24 +66,6 @@ enum filetype
   FILETYPE_ASM
 };
 
-/* these structs will be malloced for each reference */
-struct reference
-{
-  struct reference *next, *prev;
-  enum reftype type;  /* type of reference */
-  long oseekpos;      /* position in outfile for data */
-  long lseekpos;      /* position in listfile for data */
-  char delimiter;     /* delimiter for parser */
-  int addr, line;     /* address and line of reference */
-  int comma;	      /* comma when reference was set */
-  int count;	      /* only for ds: number of items */
-  int infile;         /* index in infile[], current infile */
-  int done;           /* if this reference has been computed */
-  int computed_value; /* value (only valid if done = true) */
-  int level;          /* maximum stack level of labels to use */
-  char input[1];      /* variable size buffer containing formula */
-};
-
 /* labels (will be malloced) */
 struct label
 {
@@ -155,6 +137,25 @@ struct stack
   char **macro_args;      /* arguments given to the macro */
 };
 
+/* these structs will be malloced for each reference */
+struct reference
+{
+  struct reference *next, *prev;
+  enum reftype type;       /* type of reference */
+  long oseekpos;           /* position in outfile for data */
+  long lseekpos;           /* position in listfile for data */
+  char delimiter;          /* delimiter for parser */
+  int addr, line;          /* address and line of reference */
+  int comma;	           /* comma when reference was set */
+  int count;	           /* only for ds: number of items */
+  int infile;              /* index in infile[], current infile */
+  int done;                /* if this reference has been computed */
+  int computed_value;      /* value (only valid if done = true) */
+  int level;               /* maximum stack level of labels to use */
+  struct stack stackframe; /* current stack frame */
+  char input[1];           /* variable size buffer containing formula */
+};
+
 /* global variables */
 /* mnemonics, used as argument to indx() in assemble */
 const char *mnemonics[]={
@@ -178,6 +179,7 @@ static struct macro *firstmacro = NULL;
 /* files */
 static FILE *realoutputfile, *outfile, *reallistfile, *listfile, *labelfile;
 static const char *realoutputfilename;
+static const char *labelfilename;
 static struct infile *infile;
 /* prefix for labels in labelfile */
 static const char *labelprefix = "";
@@ -190,7 +192,7 @@ static int infilecount;
 static int errors = 0;
 
 /* current line, address and file */
-static int line = 0, addr = 0, file;
+static int addr = 0, file;
 /* current number of characters in list file, for indentation */
 static int listdepth;
 
@@ -226,6 +228,9 @@ static int define_macro = 0;
 static int sp;
 static struct stack stack[MAX_INCLUDE]; /* maximum level of includes */
 
+/* Produce output even with errors.  */
+static int use_force = 0;
+
 /* print an error message, including current line and file */
 static void
 printerr (const char *fmt, ...)
@@ -233,7 +238,7 @@ printerr (const char *fmt, ...)
   va_list l;
   va_start (l, fmt);
   fprintf (stderr, "%s%s:%d: ", stack[sp].dir ? stack[sp].dir->name : "",
-	   stack[sp].name, line);
+	   stack[sp].name, stack[sp].line);
   vfprintf (stderr, fmt, l);
   va_end (l);
   errors++;
@@ -256,7 +261,7 @@ rd_comma (const char **p)
   *p = delspc (*p);
   if (**p != ',')
     {
-      printerr ("`,' expected. Remainder of line: %s.\n", *p);
+      printerr ("`,' expected. Remainder of line: %s\n", *p);
       return;
     }
   *p = delspc ((*p) + 1);
@@ -277,7 +282,7 @@ skipword (const char **pos, char delimiter)
 	case '\0':
 	  if (depth > 0)
 	    {
-	      printerr ("Unexpected end of line.\n");
+	      printerr ("unexpected end of line\n");
 	    }
 	  (*pos)--;
 	  return;
@@ -289,12 +294,14 @@ skipword (const char **pos, char delimiter)
 	    {
 	      if (delimiter == ')')
 		return;
-	      printerr ("Unexpected `)'.\n");
+	      printerr ("unexpected `)'\n");
 	    }
 	  break;
 	default:
 	  if (delimiter == c && depth == 0)
-	    return;
+	    {
+	      return;
+	    }
 	}
     }
 }
@@ -351,7 +358,7 @@ open_include_file (const char *name, struct includedir **dir)
       char *tmp = malloc (strlen (i->name) + strlen (name) + 1);
       if (!tmp)
 	{
-	  printerr ("Not enough memory trying to open include file.\n");
+	  printerr ("not enough memory trying to open include file\n");
 	  return NULL;
 	}
       strcpy (tmp, i->name);
@@ -472,9 +479,11 @@ parse_commandline (int argc, char **argv)
     {"input", required_argument, NULL, 'i'},
     {"output", required_argument, NULL, 'o'},
     {"label-prefix", required_argument, NULL, 'p'},
-    {"includepath", required_argument, NULL, 'I'}
+    {"includepath", required_argument, NULL, 'I'},
+    {"force", no_argument, NULL, 'f'},
+    {NULL, 0, NULL, 0}
   };
-  const char *short_opts = "hVvl::L::i:o:p:I:";
+  const char *short_opts = "hVvl::L::i:o:p:I:f";
   int done = 0, i, out = 0;
   infile = NULL;
   while (!done)
@@ -532,6 +541,7 @@ parse_commandline (int argc, char **argv)
 	  break;
 	case 'L':
 	  labelfile = openfile (&label, "label file", stderr, optarg, "w");
+	  labelfilename = optarg;
 	  if (verbose > 2) fprintf (stderr, "Opened label file\n");
 	  break;
 	case 'p':
@@ -539,6 +549,9 @@ parse_commandline (int argc, char **argv)
 	  break;
 	case 'I':
 	  add_include (optarg);
+	  break;
+	case 'f':
+	  use_force = 1;
 	  break;
 	case -1:
 	  done = 1;
@@ -551,7 +564,7 @@ parse_commandline (int argc, char **argv)
   for (i = optind; i < argc; ++i) open_infile (argv[i]);
   if (!infilecount) open_infile ("-");
   if (!out)
-    realoutputfile = stdout;
+    realoutputfile = openfile (&out, "output file", stdout, "a.bin", "wb");
   try_use_real_file (realoutputfile, &outfile);
   if (havelist)
     try_use_real_file (reallistfile, &listfile);
@@ -567,7 +580,7 @@ indx (const char **ptr, const char **list, int error)
     {
       if (error)
 	{
-	  printerr ("Unexpected end of line.\n");
+	  printerr ("unexpected end of line\n");
 	  return 0;
 	}
       else
@@ -583,18 +596,18 @@ indx (const char **ptr, const char **list, int error)
 	{
 	  (*ptr) += l;
 	  if (verbose >= 2)
-	    fprintf (stderr, "%5d (0x%04x): Piece of code found:%s\n", line,
-		     addr, list[i]);
+	    fprintf (stderr, "%5d (0x%04x): Piece of code found:%s\n",
+		     stack[sp].line, addr, list[i]);
 	  if (verbose >= 4)
-	    fprintf (stderr, "%5d (0x%04x): Remainder of line=%s.\n", line, addr,
-		     *ptr);
+	    fprintf (stderr, "%5d (0x%04x): Remainder of line=%s.\n",
+		     stack[sp].line, addr, *ptr);
 	  comma++;
 	  return i + 1;
 	}
     }
   if (error)
     {
-      printerr ("Parse error. Remainder of line=%s\n", *ptr);
+      printerr ("parse error. Remainder of line=%s\n", *ptr);
       if (verbose >= 1)
 	{
 	  fprintf (stderr, "When looking for any of:\n");
@@ -628,7 +641,7 @@ readlabel (const char **p)
   if (!pos || pos > c) return;
   if (pos == *p)
     {
-      printerr ("Error: `:' found without a label.");
+      printerr ("`:' found without a label");
       return;
     }
   c = pos + 1;
@@ -636,20 +649,21 @@ readlabel (const char **p)
   j = rd_label (&dummy, &i, &previous, sp);
   if (i || j)
     {
-      printerr ( "Duplicate definition of label %s.\n", *p);
+      printerr ("duplicate definition of label %s\n", *p);
       *p = c + 1;
       return;
     }
   if (NULL == (buf = malloc (sizeof (struct label) + c - *p)))
     {
-      printerr ("Not enough memory to store label %s.\n", *p);
+      printerr ("not enough memory to store label %s\n", *p);
       *p = c + 1;
       return;
     }
   strncpy (buf->name, *p, c - *p - 1);
   buf->name[c - *p - 1] = 0;
   if (verbose >= 1)
-    fprintf (stderr, "%5d (0x%04x): Label found: %s\n", line, addr, buf->name);
+    fprintf (stderr, "%5d (0x%04x): Label found: %s\n", stack[sp].line,
+	     addr, buf->name);
   *p = c + 1;
   buf->value = addr;
   lastlabel = buf;
@@ -683,7 +697,7 @@ write_one_byte (int b, int list)
   if (verbose >= 2)
     fprintf (stderr,
 	     "%5d (0x%04x): write_one_byte called with argument 0x%02x\n",
-	     line, addr, b);
+	     stack[sp].line, addr, b);
   b &= 0xff;
   putc (b, outfile);
   if (list && havelist)
@@ -699,13 +713,13 @@ static void
 wrtb (int b)
 {
   if (verbose >= 2)
-    fprintf (stderr, "%5d (0x%04x): wrtb called with argument 0x%02x\n", line,
-	     addr, b);
+    fprintf (stderr, "%5d (0x%04x): wrtb called with argument 0x%02x\n",
+	     stack[sp].line, addr, b);
   if (indexed)
     {
       if (verbose >= 3)
-	fprintf (stderr, "%5d (0x%04x): writing indexed byte 0x%02x\n", line,
-		 addr, indexed);
+	fprintf (stderr, "%5d (0x%04x): writing indexed byte 0x%02x\n",
+		 stack[sp].line, addr, indexed);
       write_one_byte (indexed, 1);
       indexed = 0;
     }
@@ -713,11 +727,12 @@ wrtb (int b)
     {
       if (verbose >= 3)
 	fprintf (stderr, "%5d (0x%04x): using a xor on byte because there is "
-		 "a writebyte.\n", line, addr);
+		 "a writebyte.\n", stack[sp].line, addr);
       b ^= 0x40;
     }
   if (verbose >= 3)
-    fprintf (stderr, "%5d (0x%04x): writing byte 0x%02x\n", line, addr, b);
+    fprintf (stderr, "%5d (0x%04x): writing byte 0x%02x\n", stack[sp].line,
+	     addr, b);
   if (bitsetres && b != 0xCB)
     {
       new_reference (bitsetres, TYPE_BSR, ',', b);
@@ -731,7 +746,7 @@ wrtb (int b)
     {
       if (verbose >= 3)
 	fprintf (stderr, "%5d (0x%04x): Making reference for index/jump %s\n",
-		 line, addr, indexjmp);
+		 stack[sp].line, addr, indexjmp);
       new_reference (indexjmp, TYPE_ABSB, ')', 1);
       indexjmp = NULL;
     }
@@ -739,7 +754,7 @@ wrtb (int b)
     {
       if (verbose >= 3)
 	fprintf (stderr, "%5d (0x%04x): writing argument byte for padding\n",
-		 line, addr);
+		 stack[sp].line, addr);
       writebyte = 0;
       new_reference (readbyte, TYPE_ABSB, mem_delimiter, 1);
     }
@@ -766,14 +781,15 @@ rd_number (const char **p, const char **endp, int base)
   char *c, num[] = "0123456789abcdefghijklmnopqrstuvwxyz";
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read number of base %d"
-	     "(string=%s).\n", line, addr, base, *p);
+	     "(string=%s).\n", stack[sp].line, addr, base, *p);
   num[base] = '\0';
   *p = delspc (*p);
   while (**p && (c = strchr (num, tolower (**p))))
     {
       i = c - num;
       if (verbose >= 5)
-	fprintf (stderr, "%5d (0x%04x): Digit found:%1x.\n", line, addr, i);
+	fprintf (stderr, "%5d (0x%04x): Digit found:%1x.\n", stack[sp].line,
+		 addr, i);
       result = result * base + i;
       (*p)++;
     }
@@ -782,7 +798,7 @@ rd_number (const char **p, const char **endp, int base)
   *p = delspc (*p);
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_number returned %d (%04x).\n",
-	    line, addr, result, result);
+	    stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -792,16 +808,16 @@ rd_otherbasenumber (const char **p)
   char c;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read basenumber (string=%s).\n",
-	    line, addr, *p);
+	    stack[sp].line, addr, *p);
   (*p)++;
   if (!**p)
     {
-      printerr ("Unexpected end of line after `@'.\n");
+      printerr ("unexpected end of line after `@'\n");
       return 0;
     }
   if (**p == '0' || !isalnum (**p))
     {
-      printerr ("Base must be between 1 and z.\n");
+      printerr ("base must be between 1 and z\n");
       return 0;
     }
   c = **p;
@@ -817,11 +833,11 @@ rd_character (const char **p)
   int i;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read character (string=%s).\n",
-	    line, addr, *p);
+	    stack[sp].line, addr, *p);
   i = **p;
   if (!i)
     {
-      printerr ("Unexpected end of line in string constant.\n");
+      printerr ("unexpected end of line in string constant\n");
       return 0;
     }
   if (i == '\\')
@@ -864,11 +880,11 @@ rd_character (const char **p)
 	      i = 7;
 	      break;
 	    case '\'':
-	      printerr ("Empty literal character.\n");
+	      printerr ("empty literal character\n");
 	      return 0;
 	    case 0:
-	      printerr ("Unexpected end of line after "
-			"backslash in string constant.\n");
+	      printerr ("unexpected end of line after "
+			"backslash in string constant\n");
 	      return 0;
 	    default:
 	      i = **p;
@@ -880,7 +896,7 @@ rd_character (const char **p)
     (*p)++;
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_character returned %d (%c).\n",
-	     line, addr, i, i);
+	     stack[sp].line, addr, i, i);
   return i;
 }
 
@@ -889,20 +905,22 @@ static int rd_expr (const char **p, char delimiter, int *valid, int level);
 static int
 compute_ref (struct reference *ref, int allow_invalid)
 {
-  int backup_addr = addr;
-  int backup_line = line;
-  int backup_comma = comma;
-  int backup_file = file;
   const char *ptr;
   int valid = 0;
+  int backup_addr = addr;
+  int backup_comma = comma;
+  int backup_file = file;
+  int backup_sp = sp;
+  struct stack backup_stack = stack[0];
+  sp = 0;
+  stack[0] = ref->stackframe;
   addr = ref->addr;
-  line = ref->line;
   comma = ref->comma;
   file = ref->infile;
   if (verbose >= 1)
     fprintf (stderr, "%5d (0x%04x): Making reference to %s (done=%d, "
 	     "computed=%d)\n",
-	     line, addr, ref->input, ref->done, ref->computed_value);
+	     stack[0].line, addr, ref->input, ref->done, ref->computed_value);
   ptr = ref->input;
   if (!ref->done)
     {
@@ -913,10 +931,11 @@ compute_ref (struct reference *ref, int allow_invalid)
 	ref->done = 1;
     }
   if (verbose >= 2)
-    fprintf (stderr, "%5d (0x%04x): Reference is %d (0x%04x).\n", line, addr,
-	     ref->computed_value, ref->computed_value);
+    fprintf (stderr, "%5d (0x%04x): Reference is %d (0x%04x).\n",
+	     stack[sp].line, addr, ref->computed_value, ref->computed_value);
+  sp = backup_sp;
+  stack[0] = backup_stack;
   addr = backup_addr;
-  line = backup_line;
   comma = backup_comma;
   file = backup_file;
   return ref->computed_value;
@@ -924,31 +943,34 @@ compute_ref (struct reference *ref, int allow_invalid)
 
 static int
 check_label (struct label *labels, const char **p, struct label **ret,
-	     struct label **previous)
+	     struct label **previous, int force_skip)
 {
   struct label *l;
   const char *c;
+  unsigned s2;
+  *p = delspc (*p);
+  for (c = *p; isalnum (*c) || *c == '_' || *c == '.'; ++c) {}
+  s2 = c - *p;
   for (l = labels; l; l = l->next)
     {
-      unsigned s1, s2, s;
+      unsigned s1, s;
       int cmp;
-      for (c = *p; isalnum (*c) || *c == '_'; ++c) {}
       s1 = strlen (l->name);
-      s2 = c - *p;
       s = s1 < s2 ? s1 : s2;
       cmp = strncmp (l->name, *p, s);
       if (cmp > 0 || (cmp == 0 && s1 > s) )
 	{
+	  if (force_skip)
+	    *p = c;
 	  return 0;
 	}
-      c = *p + s;
       if (cmp < 0 || s2 > s)
 	{
 	  if (previous)
 	    *previous = l;
 	  continue;
 	}
-      *p = delspc (c);
+      *p = c;
       /* if label is not valid, compute it */
       if (l->ref)
 	{
@@ -960,7 +982,7 @@ check_label (struct label *labels, const char **p, struct label **ret,
 	       * Set ret to show actual existence.  */
 	      /*if (verbose >= 4)*/
 		fprintf (stderr, "%5d (0x%04x): returning invalid label %s.\n",
-			 line, addr, l->name);
+			 stack[sp].line, addr, l->name);
 	      *ret = l;
 	      return 0;
 	    }
@@ -968,6 +990,8 @@ check_label (struct label *labels, const char **p, struct label **ret,
       *ret = l;
       return 1;
     }
+  if (force_skip)
+    *p = c;
   return 0;
 }
 
@@ -982,22 +1006,24 @@ rd_label (const char **p, int *exists, struct label **previous, int level)
     *previous = NULL;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read label (string=%s).\n",
-	     line, addr, *p);
+	     stack[sp].line, addr, *p);
   for (s = level; s >= 0; --s)
     {
       if (check_label (stack[s].labels, p, &l,
-		       (**p == '.' && s == sp) ? previous : NULL) )
+		       (**p == '.' && s == sp) ? previous : NULL, 0) )
 	break;
     }
   if (s < 0)
     {
       /* not yet found */
-      if (!check_label (firstlabel, p, &l, **p != '.' ? previous : NULL) )
+      const char *old_p = *p;
+      if (!check_label (firstlabel, p, &l, **p != '.' ? previous : NULL, 1) )
 	{
 	  /* label does not exist, or is invalid.  This is an error if there
 	   * is no existance check.  */
+	  fprintf (stderr, "p %p op %p\n", *p, old_p);
 	  if (!exists)
-	    printerr ("Using undefined label %s.\n", *p);
+	    printerr ("using undefined label %.*s\n", *p - old_p, old_p);
 	  /* Return a value to discriminate between non-existing and invalid */
 	  if (verbose >= 5)
 	    fprintf (stderr, "rd_label returns invalid value\n");
@@ -1017,7 +1043,8 @@ rd_value (const char **p, int *valid, int level)
   int sign = 1, not = 0, base, v;
   const char *p0, *p1, *p2;
   if (verbose >= 4)
-    fprintf (stderr, "%5d (0x%04x): Starting to read value (string=%s).\n", line,
+    fprintf (stderr, "%5d (0x%04x): Starting to read value (string=%s).\n",
+	     stack[sp].line,
 	     addr, *p);
   *p = delspc (*p);
   while (**p && strchr ("+-~", **p))
@@ -1033,9 +1060,12 @@ rd_value (const char **p, int *valid, int level)
   switch (**p)
     {
       int exist, retval;
+      char quote;
     case '(':
       (*p)++;
-      return not ^ (sign * rd_expr (p, ')', valid, level));
+      retval = not ^ (sign * rd_expr (p, ')', valid, level));
+      ++*p;
+      return retval;
     case '0':
       if ((*p)[1] == 'x')
 	{
@@ -1087,13 +1117,13 @@ rd_value (const char **p, int *valid, int level)
 	}
       return not ^ (sign * v);
     case '$':
-      (*p)++;
+      ++*p;
+      *p = delspc (*p);
       p0 = *p;
       v = rd_number (&p0, &p2, 0x10);
       if (p2 == *p)
 	{
 	  v = baseaddr;
-	  fprintf (stderr, "baseaddr = %x\n", baseaddr);
 	}
       else
 	*p = p2;
@@ -1102,14 +1132,16 @@ rd_value (const char **p, int *valid, int level)
       (*p)++;
       return not ^ (sign * rd_number (p, NULL, 2) );
     case '\'':
-      (*p)++;
+    case '"':
+      quote = **p;
+      ++*p;
       retval = not ^ (sign * rd_character (p) );
-      if (**p != '\'')
+      if (**p != quote)
 	{
-	  printerr ("Missing closing quote.\n");
+	  printerr ("missing closing quote (%c)\n", quote);
 	  return 0;
 	}
-      (*p)++;
+      ++*p;
       return retval;
     case '@':
       return not ^ (sign * rd_otherbasenumber (p) );
@@ -1134,7 +1166,7 @@ rd_value (const char **p, int *valid, int level)
 	    base = 2;
 	    break;
 	  default:
-	    printerr ("Invalid literal starting with &%c.\n", **p);
+	    printerr ("invalid literal starting with &%c\n", **p);
 	    return 0;
 	  }
 	++*p;
@@ -1152,7 +1184,7 @@ rd_factor (const char **p, int *valid, int level)
   int result;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read factor (string=%s).\n",
-	     line, addr, *p);
+	     stack[sp].line, addr, *p);
   result = rd_value (p, valid, level);
   *p = delspc (*p);
   while (**p == '*' || **p == '/')
@@ -1171,7 +1203,7 @@ rd_factor (const char **p, int *valid, int level)
     }
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_factor returned %d (%04x).\n",
-	    line, addr, result, result);
+	     stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -1181,8 +1213,8 @@ rd_term (const char **p, int *valid, int level)
   /* read a term of an expression */
   int result;
   if (verbose >= 4)
-    fprintf (stderr, "%5d (0x%04x): Starting to read term (string=%s).\n", line,
-	     addr, *p);
+    fprintf (stderr, "%5d (0x%04x): Starting to read term (string=%s).\n",
+	     stack[sp].line, addr, *p);
   result = rd_factor (p, valid, level);
   *p = delspc (*p);
   while (**p == '+' || **p == '-')
@@ -1201,7 +1233,7 @@ rd_term (const char **p, int *valid, int level)
     }
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_term returned %d (%04x).\n",
-	    line, addr, result, result);
+	     stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -1211,7 +1243,7 @@ rd_expr_shift (const char **p, int *valid, int level)
   int result;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read shift expression "
-	     "(string=%s).\n", line, addr, *p);
+	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_term (p, valid, level);
   *p = delspc (*p);
   while ( (**p == '<' || **p == '>') && (*p)[1] == **p)
@@ -1230,7 +1262,7 @@ rd_expr_shift (const char **p, int *valid, int level)
     }
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_shift returned %d (%04x).\n",
-	     line, addr, result, result);
+	     stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -1240,7 +1272,7 @@ rd_expr_unequal (const char **p, int *valid, int level)
   int result;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read "
-	     "unequality expression (string=%s).\n", line, addr, *p);
+	     "unequality expression (string=%s).\n", stack[sp].line, addr, *p);
   result = rd_expr_shift (p, valid, level);
   *p = delspc (*p);
   if (**p == '<' && (*p)[1] == '=')
@@ -1265,7 +1297,7 @@ rd_expr_unequal (const char **p, int *valid, int level)
     }
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_shift returned %d (%04x).\n",
-	     line, addr, result, result);
+	     stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -1275,12 +1307,14 @@ rd_expr_equal (const char **p, int *valid, int level)
   int result;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read equality epression "
-	     "(string=%s).\n", line, addr, *p);
+	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_expr_unequal (p, valid, level);
   *p = delspc (*p);
-  if (**p == '=' && (*p)[1] == '=')
+  if (**p == '=')
     {
-      (*p) += 2;
+      ++*p;
+      if (**p == '=')
+	++*p;
       return result == rd_expr_equal (p, valid, level);
     }
   else if (**p == '!' && (*p)[1] == '=')
@@ -1290,7 +1324,7 @@ rd_expr_equal (const char **p, int *valid, int level)
     }
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_equal returned %d (%04x).\n",
-	     line, addr, result, result);
+	     stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -1300,7 +1334,7 @@ rd_expr_and (const char **p, int *valid, int level)
   int result;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read and expression "
-	     "(string=%s).\n", line, addr, *p);
+	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_expr_equal (p, valid, level);
   *p = delspc (*p);
   if (**p == '&')
@@ -1310,7 +1344,7 @@ rd_expr_and (const char **p, int *valid, int level)
     }
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_expr_and returned %d (%04x).\n",
-	     line, addr, result, result);
+	     stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -1320,11 +1354,11 @@ rd_expr_xor (const char **p, int *valid, int level)
   int result;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read xor expression "
-	     "(string=%s).\n", line, addr, *p);
+	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_expr_and (p, valid, level);
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_expr_xor: rd_expr_and returned %d "
-	     "(%04x).\n", line, addr, result, result);
+	     "(%04x).\n", stack[sp].line, addr, result, result);
   *p = delspc (*p);
   if (**p == '^')
     {
@@ -1333,7 +1367,7 @@ rd_expr_xor (const char **p, int *valid, int level)
     }
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_expr_xor returned %d (%04x).\n",
-	     line, addr, result, result);
+	     stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -1343,11 +1377,11 @@ rd_expr_or (const char **p, int *valid, int level)
   int result;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read or expression "
-	     "(string=%s).\n", line, addr, *p);
+	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_expr_xor (p, valid, level);
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_expr_or: rd_expr_xor returned %d "
-	     "(%04x).\n", line, addr, result, result);
+	     "(%04x).\n", stack[sp].line, addr, result, result);
   *p = delspc (*p);
   if (**p == '|')
     {
@@ -1356,7 +1390,7 @@ rd_expr_or (const char **p, int *valid, int level)
     }
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_expr_or returned %d (%04x).\n",
-	     line, addr, result, result);
+	     stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -1367,12 +1401,12 @@ rd_expr (const char **p, char delimiter, int *valid, int level)
   int result = 0;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read expression (string=%s).\n",
-	     line, addr, *p);
+	     stack[sp].line, addr, *p);
   if (valid) *valid = 1;
   *p = delspc (*p);
   if (!**p || **p == delimiter)
     {
-      printerr ("Error: Expression expected (not %s)\n", *p);
+      printerr ("expression expected (not %s)\n", *p);
       return 0;
     }
   result = rd_expr_or (p, valid, level);
@@ -1393,13 +1427,18 @@ rd_expr (const char **p, char delimiter, int *valid, int level)
 	  result = rd_expr (p, delimiter, valid, level);
 	}
     }
+  *p = delspc (*p);
+  if (**p && **p != delimiter)
+    {
+      printerr ("ignoring junk at end of expression: %s\n", *p);
+    }
   if (verbose >= 5)
     {
       fprintf (stderr, "%5d (0x%04x): rd_expr returned %d (%04x).\n",
-	       line, addr, result, result);
+	       stack[sp].line, addr, result, result);
       if (valid && !*valid)
 	fprintf (stderr, "%5d (0x%04x): Returning invalid result.\n",
-		 line, addr);
+		 stack[sp].line, addr);
     }
   return result;
 }
@@ -1422,7 +1461,7 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
       if (verbose >= 3)
 	{
 	  fprintf (stderr, "%5d (0x%04x): Using calculated value %d (%x) "
-		   "immediately.\n", line, addr, value, value);
+		   "immediately.\n", stack[sp].line, addr, value, value);
 	}
     }
   else
@@ -1431,18 +1470,17 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
        */
       if (NULL == (tmp = malloc (sizeof (struct reference) + strlen (p))))
 	{
-	  printerr ("Error: unable to allocate memory for reference %s.\n", p);
+	  printerr ("unable to allocate memory for reference %s\n", p);
 	  return;
 	}
       opos = ftell (outfile);
       lpos = havelist ? ftell (listfile) : 0;
       if (verbose >= 1)
 	fprintf (stderr, "%5d (0x%04x): reference set to %s (delimiter=%c)\n",
-		 line, addr, p, delimiter);
+		 stack[sp].line, addr, p, delimiter);
       strcpy (tmp->input, p);
       tmp->addr = baseaddr;
       tmp->count = ds_count;
-      tmp->line = line;
       tmp->infile = file;
       tmp->comma = comma;
       tmp->oseekpos = opos;
@@ -1452,6 +1490,7 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
       tmp->next = firstreference;
       tmp->done = 0;
       tmp->level = sp;
+      tmp->stackframe = stack[sp];
       if (type != TYPE_LABEL)
 	{
 	  if (firstreference)
@@ -1585,7 +1624,7 @@ rd_nnc (const char **p)
       *p = delspc ((*p) + 1);
       if (**p != ')')
 	{
-	  printerr ("Missing closing parenthesis\n");
+	  printerr ("missing closing parenthesis\n");
 	  return 0;
 	}
       (*p)++;
@@ -1596,7 +1635,7 @@ rd_nnc (const char **p)
       *p = delspc ((*p) + 1);
       if (**p != ',')
 	{
-	  printerr ("Missing ','\n");
+	  printerr ("missing ','\n");
 	  return 0;
 	}
       *p = delspc ((*p) + 1);
@@ -1886,7 +1925,7 @@ rd_hlx (const char **p)
 static int
 rd_af_ (const char **p)
 {
-  const char *list[] = {"af", NULL};
+  const char *list[] = {"af'", NULL};
   return indx (p, list, 1);
 }
 
@@ -1971,7 +2010,7 @@ rd_ldbcdehla (const char **p)
       x = 0xdd + 0x20 * (i > 12);
       if (indexed && indexed != x)
 	{
-	  printerr ("Syntax error: illegal use of index registers.\n");
+	  printerr ("illegal use of index registers\n");
 	  return 0;
 	}
       indexed = x;
@@ -1981,7 +2020,7 @@ rd_ldbcdehla (const char **p)
     {
       if (indexed)
 	{
-	  printerr ("Syntax error: illegal use of index registers.\n");
+	  printerr ("illegal use of index registers\n");
 	  return 0;
 	}
       indexed = 0xDD + 0x20 * (i == 10);
@@ -2044,7 +2083,7 @@ wrt_ref (int val, int type, int count)
     case TYPE_RST:
       if ((val & 0x38) != val)
 	{
-	  printerr ("Error: incorrect RST value %d (0x%02x).\n", val, val);
+	  printerr ("incorrect RST value %d (0x%02x)\n", val, val);
 	  return;
 	}
       write_one_byte (val + 0xC7, 1);
@@ -2070,7 +2109,7 @@ wrt_ref (int val, int type, int count)
     case TYPE_BSR:
       if (val & ~7)
 	{
-	  printerr ("Error: incorrect BIT/SET/RES value %d.\n", val);
+	  printerr ("incorrect BIT/SET/RES value %d\n", val);
 	  return;
 	}
       write_one_byte (0x08 * val + count, 1);
@@ -2079,12 +2118,12 @@ wrt_ref (int val, int type, int count)
       val -= count;
       if (val < -128 || val > 127)
 	{
-	  printerr ("Relative jump out of range (%d).\n", val);
+	  printerr ("relative jump out of range (%d)\n", val);
 	}
       write_one_byte (val & 0xff, 1);
       return;
     case TYPE_LABEL:
-      printerr ("Bug in the assembler: trying to write label reference.  "
+      printerr ("bug in the assembler: trying to write label reference.  "
 		"Please report.\n");
       return;
     }
@@ -2097,10 +2136,11 @@ get_include_name (const char **ptr)
   char quote;
   char *name;
   *ptr = delspc (*ptr);
-  name = malloc (strlen (*ptr) + 1);
+  name = malloc (strlen (*ptr) );
   if (!name)
     {
-      printerr ("Unable to allocate memory for filename %s\n", *ptr);
+      printerr ("unable to allocate memory for filename %.*s\n",
+		      strlen (*ptr) - 1, *ptr);
       return NULL;
     }
   if (!**ptr)
@@ -2121,6 +2161,7 @@ get_include_name (const char **ptr)
       name[pos++] = *(*ptr)++;
     }
   name[pos] = 0;
+  ++*ptr;
   return name;
 }
 
@@ -2147,7 +2188,7 @@ read_line (void)
       buffer = malloc (size + 1);
       if (!buffer)
 	{
-	  printerr ("Out of memory reading line.\n");
+	  printerr ("out of memory reading line\n");
 	  return 0;
 	}
       memcpy (buffer, short_buffer, BUFLEN + 1);
@@ -2163,7 +2204,7 @@ read_line (void)
 	  b = realloc (buffer, size + 1);
 	  if (!b)
 	    {
-	      printerr ("Out of memory reading line.\n");
+	      printerr ("out of memory reading line\n");
 	      return 0;
 	    }
 	  buffer = b;
@@ -2184,7 +2225,7 @@ read_line (void)
   buffer = malloc (size);
   if (!buffer)
     {
-      printerr ("Out of memory.\n");
+      printerr ("out of memory\n");
       return 0;
     }
   pos = 0;
@@ -2219,14 +2260,14 @@ get_macro_args (const char **ptr, char ***ret_args, int allow_empty)
       for (; **ptr && !strchr (" \r\n\t,;", **ptr); ++*ptr) {}
       if (*ptr == c && !allow_empty)
 	{
-	  printerr ("Empty macro argument.\n");
+	  printerr ("empty macro argument\n");
 	  break;
 	}
       ++numargs;
       args = realloc (*ret_args, sizeof (char *) * numargs);
       if (!args)
 	{
-	  printerr ("Out of memory.\n");
+	  printerr ("out of memory\n");
 	  --numargs;
 	  break;
 	}
@@ -2234,7 +2275,7 @@ get_macro_args (const char **ptr, char ***ret_args, int allow_empty)
       args[numargs - 1] = malloc (*ptr - c + 1);
       if (!args[numargs - 1])
 	{
-	  printerr ("Out of memory.\n");
+	  printerr ("out of memory\n");
 	  --numargs;
 	  break;
 	}
@@ -2271,7 +2312,7 @@ assemble (void)
 	  stack[sp].file = fopen (infile[file].name, "r");
 	  if (!stack[sp].file)
 	    {
-	      printerr ("Error: unable to open %s. skipping\n",
+	      printerr ("unable to open %s. skipping\n",
 			infile[file].name);
 	      continue;
 	    }
@@ -2289,6 +2330,11 @@ assemble (void)
 	      if (buffer && buffer[0] != 0)
 		{
 		  int i, tabs;
+		  ptr = delspc (ptr);
+		  if (*ptr != 0)
+		    {
+		      printerr ("ignoring junk at end of line: %s\n", ptr);
+		    }
 		  if (listdepth < 8) tabs = 3;
 		  else if (listdepth < 16) tabs = 2;
 		  else tabs = 1;
@@ -2350,7 +2396,7 @@ assemble (void)
 	  ptr = buffer;
 	  lastlabel = NULL;
 	  baseaddr = addr;
-	  line = ++stack[sp].line;
+	  ++stack[sp].line;
 	  ptr = delspc (ptr);
 	  if (!*ptr)
 	    continue;
@@ -2383,6 +2429,7 @@ assemble (void)
 		case ENDIF:
 		  noifcount--;
 		}
+	      ptr = "";
 	      continue;
 	    }
 	  if (define_macro)
@@ -2399,7 +2446,7 @@ assemble (void)
 	      *current_line = malloc (sizeof (struct macro_line));
 	      if (!*current_line)
 		{
-		  printerr ("Out of memory.\n");
+		  printerr ("out of memory\n");
 		  continue;
 		}
 	      (*current_line)->next = NULL;
@@ -2407,7 +2454,7 @@ assemble (void)
 	      (*current_line)->line = malloc (strlen (buffer) + 1);
 	      if (!(*current_line)->line)
 		{
-		  printerr ("Out of memory.\n");
+		  printerr ("out of memory\n");
 		  free (*current_line);
 		  *current_line = NULL;
 		  continue;
@@ -2427,7 +2474,7 @@ assemble (void)
 			  newarg = malloc (sizeof (struct macro_arg));
 			  if (!newarg)
 			    {
-			      printerr ("Out of memory.\n");
+			      printerr ("out of memory\n");
 			      break;
 			    }
 			  newarg->next = NULL;
@@ -2551,7 +2598,7 @@ assemble (void)
 	      break;
 	    case DJNZ:
 	      wrtb (0x10);
-	      rd_wrt_jr (&ptr, '0');
+	      rd_wrt_jr (&ptr, '\0');
 	      break;
 	    case EI:
 	      wrtb (0xFB);
@@ -2559,7 +2606,7 @@ assemble (void)
 	    case EQU:
 	      if (!lastlabel)
 		{
-		  printerr ("EQU without label.\n");
+		  printerr ("EQU without label\n");
 		  break;
 		}
 	      new_reference (ptr, TYPE_LABEL, 0, 0);
@@ -2573,6 +2620,7 @@ assemble (void)
 			     "Scheduled label %s for later computation.\n",
 			     lastlabel->name);
 		}
+	      ptr = "";
 	      break;
 	    case EX:
 	      if (!(r = rd_ex1 (&ptr)))
@@ -2929,6 +2977,7 @@ assemble (void)
 	      break;
 	    case RST:
 	      new_reference (ptr, TYPE_RST, '\0', 1);
+	      ptr = "";
 	      break;
 	    case SBC:
 	      if (!(r = rd_a_hl (&ptr)))
@@ -3014,7 +3063,7 @@ assemble (void)
 			  write_one_byte (rd_character (&ptr), 0);
 			  if (*ptr == 0)
 			    {
-			      printerr ("Error: end of line in quoted "
+			      printerr ("end of line in quoted "
 					"string\n");
 			      break;
 			    }
@@ -3025,8 +3074,8 @@ assemble (void)
 		      if (!*ptr) break;
 		      if (*ptr++ != ',')
 			{
-			  printerr ("Error: expected end of line or ',' "
-				    "(not %c)\n", ptr[-1]);
+			  printerr ("expected end of line or ',' (not %c)\n",
+				    ptr[-1]);
 			  break;
 			}
 		      ptr = delspc (ptr);
@@ -3054,13 +3103,14 @@ assemble (void)
 	      if (r < 0)
 		{
 		  printerr ("ds should have its first argument >=0"
-			    " (not %d).\n", r);
+			    " (not -0x%x)\n", -r);
 		  break;
 		}
 	      ptr = delspc (ptr);
 	      if (*ptr)
 		{
 		  rd_comma (&ptr);
+		  readbyte = 0;
 		  rd_byte (&ptr, '\0');
 		  writebyte = 0;
 		  new_reference (readbyte, TYPE_DS, '\0', r);
@@ -3104,7 +3154,7 @@ assemble (void)
 		name = malloc (sizeof (struct name) + strlen (nm));
 		if (!name)
 		  {
-		    printerr ("Out of memory while allocating name.\n");
+		    printerr ("out of memory while allocating name\n");
 		    free (nm);
 		    break;
 		  }
@@ -3118,10 +3168,9 @@ assemble (void)
 						    &stack[sp].dir);
 		if (!stack[sp].file)
 		  {
-		    printerr ("Unable to open file %s: %s\n",
-			      name->name, strerror (errno));
+		    printerr ("unable to open file %s\n", name->name);
 		    free (name);
-		    sp--;
+		    --sp;
 		    break;
 		  }
 		name->next = firstname;
@@ -3141,7 +3190,7 @@ assemble (void)
 		incfile = open_include_file (name, NULL);
 		if (!incfile)
 		  {
-		    printerr ("Unable to open binary file %s.\n", name);
+		    printerr ("unable to open binary file %s\n", name);
 		    free (name);
 		    break;
 		  }
@@ -3153,7 +3202,7 @@ assemble (void)
 		      break;
 		    if (num != fwrite (filebuffer, 1, num, outfile) )
 		      {
-			printerr ("Error including binary file %s: %s.\n",
+			printerr ("error including binary file %s: %s\n",
 				  name, strerror (errno) );
 			break;
 		      }
@@ -3172,7 +3221,7 @@ assemble (void)
 	    case ELSE:
 	      if (ifcount == 0)
 		{
-		  printerr ("Error: else without if.\n");
+		  printerr ("else without if\n");
 		  break;
 		}
 	      noifcount = 1;
@@ -3181,7 +3230,7 @@ assemble (void)
 	    case ENDIF:
 	      if (noifcount == 0 && ifcount == 0)
 		{
-		  printerr ("Endif without if.\n");
+		  printerr ("endif without if\n");
 		  break;
 		}
 	      if (noifcount) noifcount--; else ifcount--;
@@ -3189,12 +3238,12 @@ assemble (void)
 	    case MACRO:
 	      if (!lastlabel)
 		{
-		  printerr ("Macro without label.\n");
+		  printerr ("macro without label\n");
 		  break;
 		}
 	      if (define_macro)
 		{
-		  printerr ("Nested macro definition.\n");
+		  printerr ("nested macro definition\n");
 		  break;
 		}
 	      {
@@ -3203,20 +3252,20 @@ assemble (void)
 		  {
 		    if (strcmp (m->name, lastlabel->name) == 0)
 		      {
-			printerr ("Duplicate macro definition.\n");
+			printerr ("duplicate macro definition\n");
 			break;
 		      }
 		  }
 		m = malloc (sizeof (struct macro));
 		if (!m)
 		  {
-		    printerr ("Out of memory.\n");
+		    printerr ("out of memory\n");
 		    break;
 		  }
 		m->name = malloc (strlen (lastlabel->name) + 1);
 		if (!m->name)
 		  {
-		    printerr ("Out of memory.\n");
+		    printerr ("out of memory\n");
 		    free (m);
 		    break;
 		  }
@@ -3264,8 +3313,8 @@ assemble (void)
 			if (numargs != m->numargs)
 			  {
 			    unsigned a;
-			    printerr ("Invalid number of arguments for macro "
-				      "(is %d, must be %d).\n", numargs,
+			    printerr ("invalid number of arguments for macro "
+				      "(is %d, must be %d)\n", numargs,
 				      m->numargs);
 			    for (a = 0; a < numargs; ++a)
 			      free (stack[sp].macro_args[a]);
@@ -3285,14 +3334,13 @@ assemble (void)
 		if (m)
 		  break;
 	      }
-	      printerr ("Syntax error: command or comment "
-			"expected (was %s).\n", ptr);
+	      printerr ("command or comment expected (was %s)\n", ptr);
 	    }
 	}
     }
   if (ifcount || noifcount)
     {
-      printerr ("Reached EOF at IF level %d\n", ifcount + noifcount);
+      printerr ("reached EOF at IF level %d\n", ifcount + noifcount);
     }
   if (havelist)
     {
@@ -3313,7 +3361,15 @@ assemble (void)
 	free (tmp);
       }
   }
+  if (!errors || use_force)
+    {
+      flush_to_real_file (realoutputfile, outfile);
+      if (havelist)
+	flush_to_real_file (reallistfile, listfile);
+    }
   /* write all labels */
+  if (label)
+    fseek (labelfile, 0, SEEK_END);
   for (l = firstlabel; l; l = l->next)
     {
       if (l->ref)
@@ -3322,7 +3378,7 @@ assemble (void)
 	}
       if (label)
 	{
-	  fprintf (labelfile, "%s%s:\tequ 0x%04xh\n", labelprefix, l->name,
+	  fprintf (labelfile, "%s%s:\tequ $%04x\n", labelprefix, l->name,
 		   l->value);
 	}
     }
@@ -3334,19 +3390,13 @@ assemble (void)
       free (firstlabel);
       firstlabel = l;
     }
-  if (!errors)
-    {
-      flush_to_real_file (realoutputfile, outfile);
-      if (havelist)
-	flush_to_real_file (reallistfile, listfile);
-    }
   fclose (outfile);
   if (outfile != realoutputfile)
     fclose (realoutputfile);
   if (havelist)
     {
       fclose (listfile);
-      if (listfile != reallistfile)
+      if (listfile != reallistfile && reallistfile != stderr)
 	fclose (reallistfile);
     }
   free (infile);
@@ -3365,9 +3415,10 @@ main (int argc, char **argv)
 	fprintf (stderr, "*** 1 error found ***\n");
       else
 	fprintf (stderr, "*** %d errors found ***\n", errors);
-      if (realoutputfile == outfile)
+      if (realoutputfile == outfile && !use_force)
 	{
 	  unlink (realoutputfilename);
+	  unlink (labelfilename);
 	}
       return 1;
     }

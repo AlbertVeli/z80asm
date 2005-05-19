@@ -23,8 +23,8 @@ z80asm \- assembler for the Z80 microprocessor
 .SH DESCRIPTION
 Z80asm is an assembler for Z80 assembly.
 If no input files are specified, stdin is used.  If no output file is
-specified, stdout is used.  This makes it possible to use the assembler in a
-pipeline.
+specified, "a.bin" is used.  If "-" is specified as output file, stdout is
+used.  This makes it possible to use the assembler in a pipeline.
 .PP
 When multiple input files are specified, the assembler first uses all files
 which were specified with \-i or \-\-input, in the order given.  After that, all
@@ -61,6 +61,10 @@ Add a directory to the include path.  The order in which the directories are
 tried is from back to front: the last directory specified has the highest
 priority.  "/usr/share/z80asm" is always in the include path (with lowest
 priority), you don't have to specify it.
+.TP
+.B \-f, \-\-force
+Produce output even in case of errors.  Normally the output, list and label
+files are removed when the compilation is unsuccesful.
 
 .SH COMPILER DIRECTIVES
 All mnemonics and registers are case insensitive.  All other text (in
@@ -178,7 +182,7 @@ bitwise xor
 .B a & b
 bitwise and
 .TP
-.B a == b, a != b
+.B a == b, a = b, a != b
 equality
 .TP
 .B a <= b, a >= b, a < b, a > b
@@ -252,6 +256,9 @@ defined labels may be used.  This is the case for:
 .PP
 In all other expression, labels which are defined later may be used.
 .PP
+Labels must consist of letters, digits, underscores and periods, and must not
+start with a digit.  Labels are case sensitive.
+.PP
 Labels starting with a period (.) are
 .B local
 , which means their scope is only the current include file or macro definition
@@ -259,15 +266,16 @@ Labels starting with a period (.) are
 macros, to prevent duplicate definitions when using a macro more than once.
 
 .SH EXIT STATUS
-At successful compilation, no output is produced and 0 is returned.  At any
-error, there is output on the standard error and 1 is returned.
+At successful compilation, no output is produced (except the compilation
+result) and 0 is returned.  At any error, there is output on the standard
+error and 1 is returned.
 
 .SH NOTES
-Parts that are not compiled because of an if statement are only
-checked to have a correct command. The argument is not parsed.  This means
-that if the file passes through the assembler with no warnings or errors, it
-may still not assemble correctly in a different setting (where the if's
-give different results).
+Parts that are not compiled because of an if statement and macros which are
+defined but never used are only checked to have a correct command. The
+argument is not parsed.  This means that if the file passes through the
+assembler with no warnings or errors, it may still not assemble correctly in
+a different setting (where the if's give different results).
 
 .SH BUGS
 If you find a bug, or want to send comments, please use the web interface at

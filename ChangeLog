@@ -1,3 +1,19 @@
+2005-05-19  Bas Wijnen  <shevek@fmf.nl>
+
+	* z80asm.c (struct reference, printerr, compute_ref, new_reference,
+	assemble): Added stack frame to reference.
+	* z80asm.c (labelfilename, parse_commandline): Remove output files
+	when compilation fails.
+	* z80asm.c (use_force, parse_commandline, assemble, main): Implement
+	--force.
+	* z80asm.c (parse_commandline): Make a.bin the default target.
+	* z80asm.c (check_label, rd_label, rd_value, rd_expr,
+	get_include_name, assemble): Give errors about junk at end of
+	line or expression.
+	* z80asm.c (rd_value): Support double quotes for character constants.
+	* z80asm.c (rd_expr_equal): Support = for equality.
+	* z80asm.1: Updated manpage.
+
 2005-05-18  Bas Wijnen  <shevek@fmf.nl>
 
 	* z80asm.c (enum mnemonic, enum reftype, struct reference, struct
