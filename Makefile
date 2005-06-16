@@ -1,5 +1,5 @@
 # Makefile for the Z80 assembler by shevek
-# Copyright (C) 2002,2004  Bas Wijnen
+# Copyright (C) 2002-2005  Bas Wijnen
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,12 +19,12 @@ CC = gcc
 LDFLAGS = -O2 -Wall
 CFLAGS = -O2 -Wall -Wwrite-strings -Wcast-qual -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -pedantic -ansi -Wshadow -g -W -Ignulib
 SHELL = /bin/bash
-VERSION ?= $(shell echo -n `cat VERSION | cut -d. -f1`. ; echo $$[`cat VERSION | cut -d. -f2` + 1])
+VERSION = $(shell echo -n `cat VERSION | cut -d. -f1`. ; echo $$[`cat VERSION | cut -d. -f2` + 1])
 
 all:z80asm
 
 z80asm:z80asm.c Makefile gnulib/getopt.o gnulib/getopt1.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -DVERSION=\"$(VERSION)\" $< gnulib/getopt.o gnulib/getopt1.o -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) -DVERSION=\"$(shell cat VERSION)\" $< gnulib/getopt.o gnulib/getopt1.o -o $@
 
 gnulib/%.o:gnulib/%.c gnulib/getopt.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@

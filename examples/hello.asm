@@ -5,7 +5,7 @@
 	db "AB"
 	dw start
 text:	db "This is the source which generated this program:\r\n"
-	bininclude 'hello.asm'
+	incbin 'hello.asm'
 	db 0
 start:	ld a, 80
 	ld (0xf3ae), a	; width 80

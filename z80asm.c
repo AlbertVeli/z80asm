@@ -45,7 +45,7 @@ enum mnemonic {
   OUT,POP,RES,RET,RLA,RLC,RLD,RRA,RRC,RRD,RST,SBC,SCF,SET,SLA,SLL,SLI,SRA,SRL,
   SUB,XOR,ORG,
   CP,DI,EI,EX,IM,IN,JP,JR,LD,OR,RL,RR,DB,DW,DS,DM,
-  INCLUDE,BININCLUDE,IF,ELSE,ENDIF,END,MACRO,ENDM
+  INCLUDE,INCBIN,IF,ELSE,ENDIF,END,MACRO,ENDM
 };
 
 /* types of reference */
@@ -165,7 +165,7 @@ const char *mnemonics[]={
   "inc","ind","ini","ldd","ldi","neg","nop","out","pop","res","ret","rla",
   "rlc","rld","rra","rrc","rrd","rst","sbc","scf","set","sla","sll","sli",
   "sra","srl","sub","xor","org","cp","di","ei","ex","im","in","jp","jr","ld",
-  "or","rl","rr","db","dw","ds","dm","include","bininclude","if","else",
+  "or","rl","rr","db","dw","ds","dm","include","incbin","if","else",
   "endif","end","macro","endm",NULL
 };
 
@@ -629,19 +629,25 @@ readcommand (const char **p)
 static int rd_label (const char **p, int *exists, struct label **previous,
 		     int level);
 
-/* try to read a label and store it in the list */
+/* try to read a label and optionally store it in the list */
 static void
-readlabel (const char **p)
+readlabel (const char **p, int store)
 {
-  const char *c, *pos, *dummy;
+  const char *c, *d, *pos, *dummy;
   int i, j;
   struct label *buf, *previous, **thefirstlabel;
-  for (c = *p; *c && !strchr (" \r\n\t", *c); ++c) {}
+  for (d = *p; *d && *d != ';'; ++d) {}
+  for (c = *p; !strchr (" \r\n\t", *c) && c < d; ++c) {}
   pos = strchr (*p, ':');
-  if (!pos || pos > c) return;
+  if (!pos || pos >= c) return;
   if (pos == *p)
     {
       printerr ("`:' found without a label");
+      return;
+    }
+  if (!store)
+    {
+      *p = pos + 1;
       return;
     }
   c = pos + 1;
@@ -650,13 +656,13 @@ readlabel (const char **p)
   if (i || j)
     {
       printerr ("duplicate definition of label %s\n", *p);
-      *p = c + 1;
+      *p = c;
       return;
     }
   if (NULL == (buf = malloc (sizeof (struct label) + c - *p)))
     {
       printerr ("not enough memory to store label %s\n", *p);
-      *p = c + 1;
+      *p = c;
       return;
     }
   strncpy (buf->name, *p, c - *p - 1);
@@ -664,7 +670,7 @@ readlabel (const char **p)
   if (verbose >= 1)
     fprintf (stderr, "%5d (0x%04x): Label found: %s\n", stack[sp].line,
 	     addr, buf->name);
-  *p = c + 1;
+  *p = c;
   buf->value = addr;
   lastlabel = buf;
   if (buf->name[0] == '.')
@@ -1021,7 +1027,6 @@ rd_label (const char **p, int *exists, struct label **previous, int level)
 	{
 	  /* label does not exist, or is invalid.  This is an error if there
 	   * is no existance check.  */
-	  fprintf (stderr, "p %p op %p\n", *p, old_p);
 	  if (!exists)
 	    printerr ("using undefined label %.*s\n", *p - old_p, old_p);
 	  /* Return a value to discriminate between non-existing and invalid */
@@ -2360,8 +2365,13 @@ assemble (void)
 	      struct label *next;
 	      if (verbose > 3) fprintf (stderr, "finished reading file %s\n",
 					stack[sp].name);
-	      if (havelist) fprintf (listfile, "# End of file %s\n",
-				     stack[sp].name);
+	      if (havelist)
+		{
+		  if (stack[sp].file)
+		    fprintf (listfile, "# End of file %s\n", stack[sp].name);
+		  else
+		    fprintf (listfile, "# End of macro %s\n", stack[sp].name);
+		}
 	      if (stack[sp].shouldclose) fclose (stack[sp].file);
 	      /* the top of stack is about to be popped off, throwing all
 	       * local labels out of scope.  All references at this level
@@ -2401,7 +2411,9 @@ assemble (void)
 	  if (!*ptr)
 	    continue;
 	  if (!noifcount && !define_macro)
-	    readlabel (&ptr);
+	    readlabel (&ptr, 1);
+	  else
+	    readlabel (&ptr, 0);
 	  ptr = delspc (ptr);
 	  if (!*ptr)
 	    continue;
@@ -2436,11 +2448,6 @@ assemble (void)
 	    {
 	      char *newptr;
 	      struct macro_line **current_line;
-	      if (cmd == ENDM)
-		{
-		  define_macro = 0;
-		  continue;
-		}
 	      for (current_line = &firstmacro->lines; *current_line;
 		   current_line = &(*current_line)->next) {}
 	      *current_line = malloc (sizeof (struct macro_line));
@@ -2492,8 +2499,10 @@ assemble (void)
 		}
 	      *newptr = 0;
 	      if (verbose >= 5)
-		fprintf (stderr, "added line to macro: %s\n",
+		fprintf (stderr, "added line to macro (cmd = %d): %s\n", cmd,
 			 (*current_line)->line);
+	      if (cmd == ENDM)
+		define_macro = 0;
 	      continue;
 	    }
 	  switch (cmd)
@@ -3181,7 +3190,7 @@ assemble (void)
 		  fprintf (stderr, "Reading file %s\n", name->name);
 	      }
 	      break;
-	    case BININCLUDE:
+	    case INCBIN:
 	      {
 		FILE *incfile;
 		char *name = get_include_name (&ptr);
@@ -3284,6 +3293,10 @@ assemble (void)
 		define_macro = 1;
 	      }
 	      break;
+	    case ENDM:
+	      if (stack[sp].file)
+		printerr ("endm outside macro definition\n");
+	      break;
 	    default:
 	      {
 		struct macro *m;
@@ -3294,7 +3307,7 @@ assemble (void)
 			unsigned numargs;
 			if (sp + 1 >= MAX_INCLUDE)
 			  {
-			    printerr ("stack overflow (circular include?)");
+			    printerr ("stack overflow (circular include?)\n");
 			    if (verbose > 2)
 			      {
 				int x;
