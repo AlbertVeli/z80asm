@@ -341,12 +341,12 @@ openfile (int *done, /* flag to check that a file is opened only once. */
 
 /* open an included file, searching the path */
 static FILE *
-open_include_file (const char *name, struct includedir **dir)
+open_include_file (const char *name, struct includedir **dir, const char *flags)
 {
   FILE *result;
   struct includedir *i;
   /* always try the current directory first */
-  result = fopen (name, "r");
+  result = fopen (name, flags);
   if (result)
     {
       if (dir)
@@ -363,7 +363,7 @@ open_include_file (const char *name, struct includedir **dir)
 	}
       strcpy (tmp, i->name);
       strcat (tmp, name);
-      result = fopen (tmp, "r");
+      result = fopen (tmp, flags);
       free (tmp);
       if (result)
 	{
@@ -3174,7 +3174,7 @@ assemble (void)
 		stack[sp].shouldclose = 1;
 		stack[sp].line = 0;
 		stack[sp].file = open_include_file (name->name,
-						    &stack[sp].dir);
+						    &stack[sp].dir, "r");
 		if (!stack[sp].file)
 		  {
 		    printerr ("unable to open file %s\n", name->name);
@@ -3196,7 +3196,7 @@ assemble (void)
 		char *name = get_include_name (&ptr);
 		if (!name)
 		  break;
-		incfile = open_include_file (name, NULL);
+		incfile = open_include_file (name, NULL, "rb");
 		if (!incfile)
 		  {
 		    printerr ("unable to open binary file %s\n", name);
