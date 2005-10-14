@@ -122,7 +122,7 @@ struct macro
   struct macro_line *lines;
 };
 
-/* elements on the file stack */
+/* elements on the context stack */
 struct stack
 {
   const char *name;       /* filename (for errors). may be malloced */
@@ -152,7 +152,6 @@ struct reference
   int done;                /* if this reference has been computed */
   int computed_value;      /* value (only valid if done = true) */
   int level;               /* maximum stack level of labels to use */
-  struct stack stackframe; /* current stack frame */
   char input[1];           /* variable size buffer containing formula */
 };
 
@@ -917,16 +916,14 @@ compute_ref (struct reference *ref, int allow_invalid)
   int backup_comma = comma;
   int backup_file = file;
   int backup_sp = sp;
-  struct stack backup_stack = stack[0];
-  sp = 0;
-  stack[0] = ref->stackframe;
+  sp = ref->level;
   addr = ref->addr;
   comma = ref->comma;
   file = ref->infile;
   if (verbose >= 1)
     fprintf (stderr, "%5d (0x%04x): Making reference to %s (done=%d, "
 	     "computed=%d)\n",
-	     stack[0].line, addr, ref->input, ref->done, ref->computed_value);
+	     stack[sp].line, addr, ref->input, ref->done, ref->computed_value);
   ptr = ref->input;
   if (!ref->done)
     {
@@ -940,7 +937,6 @@ compute_ref (struct reference *ref, int allow_invalid)
     fprintf (stderr, "%5d (0x%04x): Reference is %d (0x%04x).\n",
 	     stack[sp].line, addr, ref->computed_value, ref->computed_value);
   sp = backup_sp;
-  stack[0] = backup_stack;
   addr = backup_addr;
   comma = backup_comma;
   file = backup_file;
@@ -1495,7 +1491,6 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
       tmp->next = firstreference;
       tmp->done = 0;
       tmp->level = sp;
-      tmp->stackframe = stack[sp];
       if (type != TYPE_LABEL)
 	{
 	  if (firstreference)

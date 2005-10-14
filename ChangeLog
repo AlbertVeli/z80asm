@@ -1,3 +1,8 @@
+2005-10-14  Bas Wijnen  <shevek@fmf.nl>
+
+	* z80asm.c (struct reference, compute_ref, new_reference): Removed
+	copy of stack frame from struct reference.
+
 2005-09-14  Bas Wijnen  <shevek@fmf.nl>
 
 	* z80asm.c (open_include_file, assemble): Open incbin'd files as
