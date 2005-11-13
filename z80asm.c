@@ -29,35 +29,36 @@
 
 /* defines which are not function-specific */
 #ifndef BUFLEN
-#define BUFLEN 300       /* size of readbuffer for file i/o */
+#define BUFLEN 300		/* size of readbuffer for file i/o */
 #endif
 
 #ifndef MAX_INCLUDE
-#define MAX_INCLUDE 200  /* stack size for include command and macros */
+#define MAX_INCLUDE 200		/* stack size for include command and macros */
 #endif
 
 /* types */
 /* mnemonics. THESE MUST BE IN THE SAME ORDER AS const char *mnemonic[]! */
-enum mnemonic {
-  CALL,CPDR,CPIR,DJNZ,HALT,INDR,INIR,LDDR,LDIR,OTDR,OTIR,OUTD,OUTI,PUSH,
-  RETI,RETN,RLCA,RRCA,DEFB,DEFW,DEFS,DEFM,
-  ADC,ADD,AND,BIT,CCF,CPD,CPI,CPL,DAA,DEC,EQU,EXX,INC,IND,INI,LDD,LDI,NEG,NOP,
-  OUT,POP,RES,RET,RLA,RLC,RLD,RRA,RRC,RRD,RST,SBC,SCF,SET,SLA,SLL,SLI,SRA,SRL,
-  SUB,XOR,ORG,
-  CP,DI,EI,EX,IM,IN,JP,JR,LD,OR,RL,RR,DB,DW,DS,DM,
-  INCLUDE,INCBIN,IF,ELSE,ENDIF,END,MACRO,ENDM
+enum mnemonic
+{
+  CALL, CPDR, CPIR, DJNZ, HALT, INDR, INIR, LDDR, LDIR, OTDR, OTIR, OUTD,
+    OUTI, PUSH, RETI, RETN, RLCA, RRCA, DEFB, DEFW, DEFS, DEFM,
+  ADC, ADD, AND, BIT, CCF, CPD, CPI, CPL, DAA, DEC, EQU, EXX, INC, IND, INI,
+    LDD, LDI, NEG, NOP, OUT, POP, RES, RET, RLA, RLC, RLD, RRA, RRC, RRD, RST,
+    SBC, SCF, SET, SLA, SLL, SLI, SRA, SRL, SUB, XOR, ORG,
+  CP, DI, EI, EX, IM, IN, JP, JR, LD, OR, RL, RR, DB, DW, DS, DM,
+  INCLUDE, INCBIN, IF, ELSE, ENDIF, END, MACRO, ENDM
 };
 
 /* types of reference */
 enum reftype
 {
-  TYPE_BSR,  /* bit value (0-7) for bit, set and res mnemonics */
-  TYPE_DS,   /* ds reference (byte count and value) */
-  TYPE_RST,  /* rst reference: 0-0x38, with val & 0x38 == val */
-  TYPE_ABSW, /* absolute word (2 bytes) */
-  TYPE_ABSB, /* absolute byte */
-  TYPE_RELB, /* relative byte */
-  TYPE_LABEL /* equ expression */
+  TYPE_BSR,			/* bit value (0-7) for bit, set and res */
+  TYPE_DS,			/* ds reference (byte count and value) */
+  TYPE_RST,			/* rst reference: val & 0x38 == val */
+  TYPE_ABSW,			/* absolute word (2 bytes) */
+  TYPE_ABSB,			/* absolute byte */
+  TYPE_RELB,			/* relative byte */
+  TYPE_LABEL			/* equ expression */
 };
 
 /* filetypes that can appear on the input. object files are on the todo list */
@@ -69,12 +70,12 @@ enum filetype
 /* labels (will be malloced) */
 struct label
 {
-  struct label *next, *prev;/* linked list */
-  int value;		    /* value */
-  int valid;                /* if it is valid, or not yet computed */
-  int busy;                 /* if it is currently being computed */
-  struct reference *ref;    /* mallocced memory to value for computation */
-  char name[1];		    /* space with name in it */
+  struct label *next, *prev;	/* linked list */
+  int value;			/* value */
+  int valid;			/* if it is valid, or not yet computed */
+  int busy;			/* if it is currently being computed */
+  struct reference *ref;	/* mallocced memory to value for computation */
+  char name[1];			/* space with name in it */
 };
 
 /* files that were given on the commandline */
@@ -125,47 +126,50 @@ struct macro
 /* elements on the context stack */
 struct stack
 {
-  const char *name;       /* filename (for errors). may be malloced */
-  struct includedir *dir; /* directory where it comes from, if any */
-  FILE *file;             /* the handle */
-  int line;               /* the current line number (for errors) */
-  int shouldclose;        /* if this file should be closed when done */
-  struct label *labels;   /* local labels for this stack level */
+  const char *name;		/* filename (for errors). may be malloced */
+  struct includedir *dir;	/* directory where it comes from, if any */
+  FILE *file;			/* the handle */
+  int line;			/* the current line number (for errors) */
+  int shouldclose;		/* if this file should be closed when done */
+  struct label *labels;		/* local labels for this stack level */
   /* if file is NULL, this is a macro entry */
   struct macro *macro;
   struct macro_line *macro_line;
-  char **macro_args;      /* arguments given to the macro */
+  char **macro_args;		/* arguments given to the macro */
 };
 
 /* these structs will be malloced for each reference */
 struct reference
 {
   struct reference *next, *prev;
-  enum reftype type;       /* type of reference */
-  long oseekpos;           /* position in outfile for data */
-  long lseekpos;           /* position in listfile for data */
-  char delimiter;          /* delimiter for parser */
-  int addr, line;          /* address and line of reference */
-  int comma;	           /* comma when reference was set */
-  int count;	           /* only for ds: number of items */
-  int infile;              /* index in infile[], current infile */
-  int done;                /* if this reference has been computed */
-  int computed_value;      /* value (only valid if done = true) */
-  int level;               /* maximum stack level of labels to use */
-  char input[1];           /* variable size buffer containing formula */
+  enum reftype type;		/* type of reference */
+  long oseekpos;		/* position in outfile for data */
+  long lseekpos;		/* position in listfile for data */
+  char delimiter;		/* delimiter for parser */
+  int addr, line;		/* address and line of reference */
+  int comma;			/* comma when reference was set */
+  int count;			/* only for ds: number of items */
+  int infile;			/* index in infile[], current infile */
+  int done;			/* if this reference has been computed */
+  int computed_value;		/* value (only valid if done = true) */
+  int level;			/* maximum stack level of labels to use */
+  char input[1];		/* variable size buffer containing formula */
 };
 
 /* global variables */
 /* mnemonics, used as argument to indx() in assemble */
-const char *mnemonics[]={
-  "call","cpdr","cpir","djnz","halt","indr","inir","lddr","ldir","otdr","otir",
-  "outd","outi","push","reti","retn","rlca","rrca","defb","defw","defs","defm",
-  "adc","add","and","bit","ccf","cpd","cpi","cpl","daa","dec","equ","exx",
-  "inc","ind","ini","ldd","ldi","neg","nop","out","pop","res","ret","rla",
-  "rlc","rld","rra","rrc","rrd","rst","sbc","scf","set","sla","sll","sli",
-  "sra","srl","sub","xor","org","cp","di","ei","ex","im","in","jp","jr","ld",
-  "or","rl","rr","db","dw","ds","dm","include","incbin","if","else",
-  "endif","end","macro","endm",NULL
+const char *mnemonics[] = {
+  "call", "cpdr", "cpir", "djnz", "halt", "indr", "inir", "lddr", "ldir",
+    "otdr", "otir", "outd", "outi", "push", "reti", "retn", "rlca", "rrca",
+    "defb", "defw", "defs", "defm",
+  "adc", "add", "and", "bit", "ccf", "cpd", "cpi", "cpl", "daa", "dec", "equ",
+    "exx", "inc", "ind", "ini", "ldd", "ldi", "neg", "nop", "out", "pop",
+    "res", "ret", "rla", "rlc", "rld", "rra", "rrc", "rrd", "rst", "sbc",
+    "scf", "set", "sla", "sll", "sli", "sra", "srl", "sub", "xor", "org",
+  "cp", "di", "ei", "ex", "im", "in", "jp", "jr", "ld", "or", "rl", "rr",
+    "db", "dw", "ds", "dm",
+  "include", "incbin", "if", "else", "endif", "end", "macro", "endm",
+  NULL
 };
 
 /* linked lists */
@@ -225,7 +229,7 @@ static int define_macro = 0;
 
 /* file (and macro) stack */
 static int sp;
-static struct stack stack[MAX_INCLUDE]; /* maximum level of includes */
+static struct stack stack[MAX_INCLUDE];	/* maximum level of includes */
 
 /* Produce output even with errors.  */
 static int use_force = 0;
@@ -249,7 +253,8 @@ delspc (const char *ptr)
 {
   while (*ptr && isspace (*ptr))
     ptr++;
-  if (*ptr ==';') ptr = "";
+  if (*ptr == ';')
+    ptr = "";
   return ptr;
 }
 
@@ -307,11 +312,11 @@ skipword (const char **pos, char delimiter)
 
 /* callback function for argument parser, used to open output files. */
 static FILE *
-openfile (int *done, /* flag to check that a file is opened only once. */
-	  const char *type, /* name of filetype for error message */
-	  FILE *def,         /* default value, in case "-" is specified */
-	  const char *name, /* filename to open */
-	  const char *flags) /* open flags */
+openfile (int *done,		/* flag to check that a file is opened only once. */
+	  const char *type,	/* name of filetype for error message */
+	  FILE * def,		/* default value, in case "-" is specified */
+	  const char *name,	/* filename to open */
+	  const char *flags)	/* open flags */
 {
   FILE *retval;
   if (*done)
@@ -340,7 +345,8 @@ openfile (int *done, /* flag to check that a file is opened only once. */
 
 /* open an included file, searching the path */
 static FILE *
-open_include_file (const char *name, struct includedir **dir, const char *flags)
+open_include_file (const char *name, struct includedir **dir,
+		   const char *flags)
 {
   FILE *result;
   struct includedir *i;
@@ -378,7 +384,8 @@ open_include_file (const char *name, struct includedir **dir, const char *flags)
 static void
 open_infile (const char *name)
 {
-  if (!(infile = realloc (infile, sizeof (struct infile) * (infilecount + 1))))
+  infile = realloc (infile, sizeof (struct infile) * (infilecount + 1))
+  if (!infile)
     {
       fprintf (stderr, "Error: insufficient memory\n");
       exit (1);
@@ -410,7 +417,7 @@ add_include (const char *name)
 }
 
 static void
-try_use_real_file (FILE *real, FILE **backup)
+try_use_real_file (FILE * real, FILE ** backup)
 {
   fpos_t pos;
   if (fgetpos (real, &pos) == 0)
@@ -427,7 +434,7 @@ try_use_real_file (FILE *real, FILE **backup)
 }
 
 static void
-flush_to_real_file (FILE *real, FILE *tmp)
+flush_to_real_file (FILE * real, FILE * tmp)
 {
   int l, size, len = 0;
   char buf[BUFLEN];
@@ -445,8 +452,7 @@ flush_to_real_file (FILE *real, FILE *tmp)
 	break;
       if (len <= 0)
 	{
-	  fprintf (stderr, "error reading temp file: %s\n",
-		   strerror (errno));
+	  fprintf (stderr, "error reading temp file: %s\n", strerror (errno));
 	  exit (1);
 	}
       l = 0;
@@ -487,7 +493,7 @@ parse_commandline (int argc, char **argv)
   infile = NULL;
   while (!done)
     {
-      switch (getopt_long (argc, argv, short_opts, opts, NULL) )
+      switch (getopt_long (argc, argv, short_opts, opts, NULL))
 	{
 	case 'h':
 	  /* split in two, to avoid too long string constant */
@@ -528,7 +534,8 @@ parse_commandline (int argc, char **argv)
 	  realoutputfile
 	    = openfile (&out, "output file", stdout, optarg, "wb");
 	  realoutputfilename = optarg;
-	  if (verbose > 2) fprintf (stderr, "Opened outputfile\n");
+	  if (verbose > 2)
+	    fprintf (stderr, "Opened outputfile\n");
 	  break;
 	case 'i':
 	  open_infile (optarg);
@@ -536,12 +543,14 @@ parse_commandline (int argc, char **argv)
 	case 'l':
 	  reallistfile
 	    = openfile (&havelist, "list file", stderr, optarg, "w");
-	  if (verbose > 2) fprintf (stderr, "Opened list file\n");
+	  if (verbose > 2)
+	    fprintf (stderr, "Opened list file\n");
 	  break;
 	case 'L':
 	  labelfile = openfile (&label, "label file", stderr, optarg, "w");
 	  labelfilename = optarg;
-	  if (verbose > 2) fprintf (stderr, "Opened label file\n");
+	  if (verbose > 2)
+	    fprintf (stderr, "Opened label file\n");
 	  break;
 	case 'p':
 	  labelprefix = optarg;
@@ -560,8 +569,10 @@ parse_commandline (int argc, char **argv)
 	  break;
 	}
     }
-  for (i = optind; i < argc; ++i) open_infile (argv[i]);
-  if (!infilecount) open_infile ("-");
+  for (i = optind; i < argc; ++i)
+    open_infile (argv[i]);
+  if (!infilecount)
+    open_infile ("-");
   if (!out)
     realoutputfile = openfile (&out, "output file", stdout, "a.bin", "wb");
   try_use_real_file (realoutputfile, &outfile);
@@ -635,10 +646,15 @@ readlabel (const char **p, int store)
   const char *c, *d, *pos, *dummy;
   int i, j;
   struct label *buf, *previous, **thefirstlabel;
-  for (d = *p; *d && *d != ';'; ++d) {}
-  for (c = *p; !strchr (" \r\n\t", *c) && c < d; ++c) {}
+  for (d = *p; *d && *d != ';'; ++d)
+    {
+    }
+  for (c = *p; !strchr (" \r\n\t", *c) && c < d; ++c)
+    {
+    }
   pos = strchr (*p, ':');
-  if (!pos || pos >= c) return;
+  if (!pos || pos >= c)
+    return;
   if (pos == *p)
     {
       printerr ("`:' found without a label");
@@ -803,7 +819,7 @@ rd_number (const char **p, const char **endp, int base)
   *p = delspc (*p);
   if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): rd_number returned %d (%04x).\n",
-	    stack[sp].line, addr, result, result);
+	     stack[sp].line, addr, result, result);
   return result;
 }
 
@@ -812,8 +828,9 @@ rd_otherbasenumber (const char **p)
 {
   char c;
   if (verbose >= 4)
-    fprintf (stderr, "%5d (0x%04x): Starting to read basenumber (string=%s).\n",
-	    stack[sp].line, addr, *p);
+    fprintf (stderr,
+	     "%5d (0x%04x): Starting to read basenumber (string=%s).\n",
+	     stack[sp].line, addr, *p);
   (*p)++;
   if (!**p)
     {
@@ -837,8 +854,9 @@ rd_character (const char **p)
 {
   int i;
   if (verbose >= 4)
-    fprintf (stderr, "%5d (0x%04x): Starting to read character (string=%s).\n",
-	    stack[sp].line, addr, *p);
+    fprintf (stderr,
+	     "%5d (0x%04x): Starting to read character (string=%s).\n",
+	     stack[sp].line, addr, *p);
   i = **p;
   if (!i)
     {
@@ -923,7 +941,8 @@ compute_ref (struct reference *ref, int allow_invalid)
   if (verbose >= 1)
     fprintf (stderr, "%5d (0x%04x): Making reference to %s (done=%d, "
 	     "computed=%d)\n",
-	     stack[sp].line, addr, ref->input, ref->done, ref->computed_value);
+	     stack[sp].line, addr, ref->input, ref->done,
+	     ref->computed_value);
   ptr = ref->input;
   if (!ref->done)
     {
@@ -951,7 +970,9 @@ check_label (struct label *labels, const char **p, struct label **ret,
   const char *c;
   unsigned s2;
   *p = delspc (*p);
-  for (c = *p; isalnum (*c) || *c == '_' || *c == '.'; ++c) {}
+  for (c = *p; isalnum (*c) || *c == '_' || *c == '.'; ++c)
+    {
+    }
   s2 = c - *p;
   for (l = labels; l; l = l->next)
     {
@@ -960,7 +981,7 @@ check_label (struct label *labels, const char **p, struct label **ret,
       s1 = strlen (l->name);
       s = s1 < s2 ? s1 : s2;
       cmp = strncmp (l->name, *p, s);
-      if (cmp > 0 || (cmp == 0 && s1 > s) )
+      if (cmp > 0 || (cmp == 0 && s1 > s))
 	{
 	  if (force_skip)
 	    *p = c;
@@ -982,7 +1003,7 @@ check_label (struct label *labels, const char **p, struct label **ret,
 	      /* label was not valid, and isn't computable.  tell the
 	       * caller that it doesn't exist, so it will try again later.
 	       * Set ret to show actual existence.  */
-	      /*if (verbose >= 4)*/
+	      if (verbose >= 4)
 		fprintf (stderr, "%5d (0x%04x): returning invalid label %s.\n",
 			 stack[sp].line, addr, l->name);
 	      *ret = l;
@@ -1012,14 +1033,14 @@ rd_label (const char **p, int *exists, struct label **previous, int level)
   for (s = level; s >= 0; --s)
     {
       if (check_label (stack[s].labels, p, &l,
-		       (**p == '.' && s == sp) ? previous : NULL, 0) )
+		       (**p == '.' && s == sp) ? previous : NULL, 0))
 	break;
     }
   if (s < 0)
     {
       /* not yet found */
       const char *old_p = *p;
-      if (!check_label (firstlabel, p, &l, **p != '.' ? previous : NULL, 1) )
+      if (!check_label (firstlabel, p, &l, **p != '.' ? previous : NULL, 1))
 	{
 	  /* label does not exist, or is invalid.  This is an error if there
 	   * is no existance check.  */
@@ -1045,8 +1066,7 @@ rd_value (const char **p, int *valid, int level)
   const char *p0, *p1, *p2;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read value (string=%s).\n",
-	     stack[sp].line,
-	     addr, *p);
+	     stack[sp].line, addr, *p);
   *p = delspc (*p);
   while (**p && strchr ("+-~", **p))
     {
@@ -1070,7 +1090,7 @@ rd_value (const char **p, int *valid, int level)
     case '0':
       if ((*p)[1] == 'x')
 	{
-	  (*p)+=2;
+	  (*p) += 2;
 	  return not ^ (sign * rd_number (p, NULL, 0x10));
 	}
       base = 8;			/* If first digit it 0, assume octal unless suffix */
@@ -1085,9 +1105,9 @@ rd_value (const char **p, int *valid, int level)
     case '8':
     case '9':
       p0 = *p;
-      rd_number(p, &p1, 36);	/* Advance to end of numeric string */
+      rd_number (p, &p1, 36);	/* Advance to end of numeric string */
       p1--;			/* Last character in numeric string */
-      switch ( *p1 )
+      switch (*p1)
 	{
 	case 'h':
 	case 'H':
@@ -1111,10 +1131,10 @@ rd_value (const char **p, int *valid, int level)
 	  p1++;
 	  break;
 	}
-      v = rd_number(&p0, &p2, base);
-      if ( p1 != p2 )
+      v = rd_number (&p0, &p2, base);
+      if (p1 != p2)
 	{
-	  printerr("invalid character in number: \'%c\'\n", *p2);
+	  printerr ("invalid character in number: \'%c\'\n", *p2);
 	}
       return not ^ (sign * v);
     case '$':
@@ -1131,12 +1151,12 @@ rd_value (const char **p, int *valid, int level)
       return not ^ (sign * v);
     case '%':
       (*p)++;
-      return not ^ (sign * rd_number (p, NULL, 2) );
+      return not ^ (sign * rd_number (p, NULL, 2));
     case '\'':
     case '"':
       quote = **p;
       ++*p;
-      retval = not ^ (sign * rd_character (p) );
+      retval = not ^ (sign * rd_character (p));
       if (**p != quote)
 	{
 	  printerr ("missing closing quote (%c)\n", quote);
@@ -1145,7 +1165,7 @@ rd_value (const char **p, int *valid, int level)
       ++*p;
       return retval;
     case '@':
-      return not ^ (sign * rd_otherbasenumber (p) );
+      return not ^ (sign * rd_otherbasenumber (p));
     case '?':
       rd_label (p, &exist, NULL, level);
       return not ^ (sign * exist);
@@ -1171,10 +1191,10 @@ rd_value (const char **p, int *valid, int level)
 	    return 0;
 	  }
 	++*p;
-	return not ^ (sign * rd_number (p, NULL, base) );
+	return not ^ (sign * rd_number (p, NULL, base));
       }
     default:
-      return not ^ (sign * rd_label (p, valid, NULL, level) );
+      return not ^ (sign * rd_label (p, valid, NULL, level));
     }
 }
 
@@ -1247,7 +1267,7 @@ rd_expr_shift (const char **p, int *valid, int level)
 	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_term (p, valid, level);
   *p = delspc (*p);
-  while ( (**p == '<' || **p == '>') && (*p)[1] == **p)
+  while ((**p == '<' || **p == '>') && (*p)[1] == **p)
     {
       if (**p == '<')
 	{
@@ -1273,7 +1293,8 @@ rd_expr_unequal (const char **p, int *valid, int level)
   int result;
   if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Starting to read "
-	     "unequality expression (string=%s).\n", stack[sp].line, addr, *p);
+	     "unequality expression (string=%s).\n", stack[sp].line, addr,
+	     *p);
   result = rd_expr_shift (p, valid, level);
   *p = delspc (*p);
   if (**p == '<' && (*p)[1] == '=')
@@ -1315,7 +1336,7 @@ rd_expr_equal (const char **p, int *valid, int level)
     {
       ++*p;
       if (**p == '=')
-	++*p;
+	++ * p;
       return result == rd_expr_equal (p, valid, level);
     }
   else if (**p == '!' && (*p)[1] == '=')
@@ -1401,9 +1422,11 @@ rd_expr (const char **p, char delimiter, int *valid, int level)
   /* read an expression. delimiter can _not_ be '?' */
   int result = 0;
   if (verbose >= 4)
-    fprintf (stderr, "%5d (0x%04x): Starting to read expression (string=%s).\n",
+    fprintf (stderr,
+	     "%5d (0x%04x): Starting to read expression (string=%s).\n",
 	     stack[sp].line, addr, *p);
-  if (valid) *valid = 1;
+  if (valid)
+    *valid = 1;
   *p = delspc (*p);
   if (!**p || **p == delimiter)
     {
@@ -1418,13 +1441,15 @@ rd_expr (const char **p, char delimiter, int *valid, int level)
       if (result)
 	{
 	  result = rd_expr (p, ':', valid, level);
-	  if (**p) (*p)++;
+	  if (**p)
+	    (*p)++;
 	  rd_expr (p, delimiter, valid, level);
 	}
       else
 	{
 	  rd_expr (p, ':', valid, level);
-	  if (**p) (*p)++;
+	  if (**p)
+	    (*p)++;
 	  result = rd_expr (p, delimiter, valid, level);
 	}
     }
@@ -1533,7 +1558,8 @@ static int
 rd_word (const char **p, char delimiter)
 {
   *p = delspc (*p);
-  if (**p == 0) return 0;
+  if (**p == 0)
+    return 0;
   readword = *p;
   mem_delimiter = delimiter;
   skipword (p, delimiter);
@@ -1545,7 +1571,8 @@ static int
 rd_byte (const char **p, char delimiter)
 {
   *p = delspc (*p);
-  if (**p == 0) return 0;
+  if (**p == 0)
+    return 0;
   readbyte = *p;
   writebyte = 1;
   mem_delimiter = delimiter;
@@ -1588,7 +1615,7 @@ rd_ex1 (const char **p)
 {
 #define DE 2
 #define AF 3
-  const char *list[] = {"(sp)", "de", "af", NULL};
+  const char *list[] = { "(sp)", "de", "af", NULL };
   return indx (p, list, 1);
 }
 
@@ -1597,7 +1624,7 @@ static int
 rd_in (const char **p)
 {
 #define A 8
-  const char *list[] = {"b", "c", "d", "e", "h", "l", "f", "a", NULL};
+  const char *list[] = { "b", "c", "d", "e", "h", "l", "f", "a", NULL };
   return indx (p, list, 1);
 }
 
@@ -1605,7 +1632,7 @@ rd_in (const char **p)
 static int
 rd_out (const char **p)
 {
-  const char *list[] = {"b", "c", "d", "e", "h", "l", "0", "a", NULL};
+  const char *list[] = { "b", "c", "d", "e", "h", "l", "0", "a", NULL };
   return indx (p, list, 1);
 }
 
@@ -1615,9 +1642,10 @@ rd_nnc (const char **p)
 {
 #define C 1
   int i;
-  const char *list[] = {"(", NULL};
+  const char *list[] = { "(", NULL };
   i = indx (p, list, 1);
-  if (!i) return 0;
+  if (!i)
+    return 0;
   *p = delspc (*p);
   if (tolower (**p) == 'c')
     {
@@ -1649,7 +1677,7 @@ rd_nnc (const char **p)
 static int
 rd_c (const char **p)
 {
-  const char *list[] = {"(c)", "(bc)", NULL};
+  const char *list[] = { "(c)", "(bc)", NULL };
   return indx (p, list, 1);
 }
 
@@ -1658,7 +1686,7 @@ static int
 rd_a_hl (const char **p)
 {
 #define HL 2
-  const char *list[] = {"a", "hl", NULL};
+  const char *list[] = { "a", "hl", NULL };
   return indx (p, list, 1);
 }
 
@@ -1691,7 +1719,8 @@ rd_ld (const char **p)
   const char *list[] = {
     "ixh", "ixl", "iyh", "iyl", "bc", "de", "hl", "sp", "ix",
     "iy", "b", "c", "d", "e", "h", "l", "(hl)", "a", "i",
-    "r", "(bc)", "(de)", "(ix", "(iy", "(", NULL};
+    "r", "(bc)", "(de)", "(ix", "(iy", "(", NULL
+  };
   i = indx (p, list, 1);
   if (!i)
     return 0;
@@ -1729,7 +1758,8 @@ rd_jp (const char **p)
   int i;
   const char *list[] = {
     "nz", "z", "nc", "c", "po", "pe", "p", "m", "(ix)", "(iy)",
-    "(hl)", NULL};
+    "(hl)", NULL
+  };
   i = indx (p, list, 0);
   if (i < 9)
     return i;
@@ -1743,7 +1773,7 @@ rd_jp (const char **p)
 static int
 rd_jr (const char **p)
 {
-  const char *list[] = {"nz", "z", "nc", "c", NULL};
+  const char *list[] = { "nz", "z", "nc", "c", NULL };
   return indx (p, list, 0);
 }
 
@@ -1751,7 +1781,7 @@ rd_jr (const char **p)
 static int
 rd_a (const char **p)
 {
-  const char *list[] = {"a", NULL};
+  const char *list[] = { "a", NULL };
   return indx (p, list, 1);
 }
 
@@ -1760,7 +1790,7 @@ static int
 rd_stack (const char **p)
 {
   int i;
-  const char *list[] = {"bc", "de", "hl", "af", "ix", "iy", NULL};
+  const char *list[] = { "bc", "de", "hl", "af", "ix", "iy", NULL };
   i = indx (p, list, 1);
   if (i < 5)
     return i;
@@ -1773,7 +1803,7 @@ static int
 rd_a_hlx (const char **p)
 {
   int i;
-  const char *list[] = {"a", "hl", "ix", "iy", NULL};
+  const char *list[] = { "a", "hl", "ix", "iy", NULL };
   i = indx (p, list, 1);
   if (i < 2)
     return i;
@@ -1787,7 +1817,7 @@ rd_a_hlx (const char **p)
 static int
 rd_rr_ (const char **p)
 {
-  const char *list[] = {"bc", "de", "hl", "sp", NULL};
+  const char *list[] = { "bc", "de", "hl", "sp", NULL };
   return indx (p, list, 1);
 }
 
@@ -1795,9 +1825,9 @@ rd_rr_ (const char **p)
 static int
 rd_rrxx (const char **p)
 {
-  const char *listx[] = {"bc", "de", "ix", "sp", NULL};
-  const char *listy[] = {"bc", "de", "iy", "sp", NULL};
-  const char *list[] = {"bc", "de", "hl", "sp", NULL};
+  const char *listx[] = { "bc", "de", "ix", "sp", NULL };
+  const char *listy[] = { "bc", "de", "iy", "sp", NULL };
+  const char *list[] = { "bc", "de", "hl", "sp", NULL };
   switch (indexed)
     {
     case 0xDD:
@@ -1817,7 +1847,8 @@ rd_r (const char **p)
   int i;
   const char *list[] = {
     "ixl", "ixh", "iyl", "iyh", "b", "c", "d", "e", "h", "l", "(hl)",
-    "a", "(ix", "(iy", NULL};
+    "a", "(ix", "(iy", NULL
+  };
   i = indx (p, list, 0);
   if (!i)
     {
@@ -1843,7 +1874,8 @@ rd_r_ (const char **p)
 {
   int i;
   const char *list[] = {
-    "b", "c", "d", "e", "h", "l", "(hl)", "a", "(ix", "(iy", NULL};
+    "b", "c", "d", "e", "h", "l", "(hl)", "a", "(ix", "(iy", NULL
+  };
   i = indx (p, list, 1);
   if (i < 9)
     return i;
@@ -1857,7 +1889,8 @@ static int
 rd_0_7 (const char **p)
 {
   *p = delspc (*p);
-  if (**p == 0 || **p == ';') return 0;
+  if (**p == 0 || **p == ';')
+    return 0;
   bitsetres = *p;
   skipword (p, ',');
   return 1;
@@ -1867,7 +1900,7 @@ rd_0_7 (const char **p)
 static int
 rd_cc (const char **p)
 {
-  const char *list[] = {"nz", "z", "nc", "c", "po", "pe", "p", "m", NULL};
+  const char *list[] = { "nz", "z", "nc", "c", "po", "pe", "p", "m", NULL };
   return indx (p, list, 0);
 }
 
@@ -1877,8 +1910,9 @@ rd_r_rr (const char **p)
 {
   int i;
   const char *list[] = {
-	    "iy", "ix", "sp", "hl", "de", "bc", "", "b", "c", "d", "e", "h",
-	    "l", "(hl)", "a", "(ix", "(iy", NULL};
+    "iy", "ix", "sp", "hl", "de", "bc", "", "b", "c", "d", "e", "h",
+    "l", "(hl)", "a", "(ix", "(iy", NULL
+  };
   i = indx (p, list, 1);
   if (!i)
     return 0;
@@ -1898,7 +1932,7 @@ rd_r_rr (const char **p)
 static int
 rd_hl (const char **p)
 {
-  const char *list[] = {"hl", NULL};
+  const char *list[] = { "hl", NULL };
   return indx (p, list, 1);
 }
 
@@ -1907,7 +1941,7 @@ static int
 rd_hlx (const char **p)
 {
   int i;
-  const char *list[] = {"hl", "ix", "iy", NULL};
+  const char *list[] = { "hl", "ix", "iy", NULL };
   i = indx (p, list, 1);
   switch (i)
     {
@@ -1925,7 +1959,7 @@ rd_hlx (const char **p)
 static int
 rd_af_ (const char **p)
 {
-  const char *list[] = {"af'", NULL};
+  const char *list[] = { "af'", NULL };
   return indx (p, list, 1);
 }
 
@@ -1933,7 +1967,7 @@ rd_af_ (const char **p)
 static int
 rd_0_2 (const char **p)
 {
-  const char *list[] = {"0", "", "1", "2", NULL};
+  const char *list[] = { "0", "", "1", "2", NULL };
   return indx (p, list, 1);
 }
 
@@ -1942,7 +1976,7 @@ static int
 rd_ld_hl (const char **p)
 {
   int i;
-  const char *list[] = {"b", "c", "d", "e", "h", "l", "", "a", NULL};
+  const char *list[] = { "b", "c", "d", "e", "h", "l", "", "a", NULL };
   i = indx (p, list, 0);
   if (i)
     return i;
@@ -1957,7 +1991,7 @@ rd_ld_nn (const char **p)
 #define ld_nnHL 5
 #define ld_nnA 6
   int i;
-  const char *list[] = {"bc", "de", "", "sp", "hl", "a", "ix", "iy", NULL};
+  const char *list[] = { "bc", "de", "", "sp", "hl", "a", "ix", "iy", NULL };
   i = indx (p, list, 1);
   if (i < 7)
     return i;
@@ -1975,7 +2009,8 @@ rd_lda (const char **p)
   int i;
   const char *list[] = {
     "(sp)", "(iy", "(de)", "(bc)", "(ix", "b", "c", "d", "e", "h",
-    "l", "(hl)", "a", "i", "r", "(", NULL};
+    "l", "(hl)", "a", "i", "r", "(", NULL
+  };
   i = indx (p, list, 0);
   if (i == 2 || i == 5)
     {
@@ -2002,7 +2037,8 @@ rd_ldbcdehla (const char **p)
   int i;
   const char *list[] = {
     "b", "c", "d", "e", "h", "l", "(hl)", "a", "(ix", "(iy", "ixh",
-    "ixl", "iyh", "iyl", NULL};
+    "ixl", "iyh", "iyl", NULL
+  };
   i = indx (p, list, 0);
   if (i > 10)
     {
@@ -2039,7 +2075,7 @@ rd_nn_nn (const char **p)
 {
 #define _NN 1
   int i;
-  const char *list[] = {"(", NULL};
+  const char *list[] = { "(", NULL };
   i = indx (p, list, 0);
   if (i)
     {
@@ -2057,7 +2093,7 @@ rd_sp (const char **p)
 #define SPNN 0
 #define SPHL 1
   int i;
-  const char *list[] = {"(", "ix", "iy", "hl", NULL};
+  const char *list[] = { "(", "ix", "iy", "hl", NULL };
   i = indx (p, list, 0);
   switch (i)
     {
@@ -2090,7 +2126,7 @@ wrt_ref (int val, int type, int count)
       return;
     case TYPE_ABSW:
       write_one_byte (val & 0xff, 1);
-      write_one_byte ( (val >> 8) & 0xff, 1);
+      write_one_byte ((val >> 8) & 0xff, 1);
       return;
     case TYPE_ABSB:
       write_one_byte (val & 0xff, 1);
@@ -2136,11 +2172,11 @@ get_include_name (const char **ptr)
   char quote;
   char *name;
   *ptr = delspc (*ptr);
-  name = malloc (strlen (*ptr) );
+  name = malloc (strlen (*ptr));
   if (!name)
     {
       printerr ("unable to allocate memory for filename %.*s\n",
-		      strlen (*ptr) - 1, *ptr);
+		strlen (*ptr) - 1, *ptr);
       return NULL;
     }
   if (!**ptr)
@@ -2177,7 +2213,7 @@ read_line (void)
       if (buffer && buffer != short_buffer)
 	free (buffer);
       buffer = NULL;
-      if (!fgets (short_buffer, BUFLEN + 1, f) )
+      if (!fgets (short_buffer, BUFLEN + 1, f))
 	return 0;
       if (strlen (short_buffer) < BUFLEN)
 	{
@@ -2257,7 +2293,9 @@ get_macro_args (const char **ptr, char ***ret_args, int allow_empty)
       if (!**ptr)
 	break;
       c = *ptr;
-      for (; **ptr && !strchr (" \r\n\t,;", **ptr); ++*ptr) {}
+      for (; **ptr && !strchr (" \r\n\t,;", **ptr); ++*ptr)
+	{
+	}
       if (*ptr == c && !allow_empty)
 	{
 	  printerr ("empty macro argument\n");
@@ -2293,12 +2331,12 @@ assemble (void)
   const char *ptr;
   struct label *l;
   char *bufptr;
-  int r, s; /* registers */
+  int r, s;			/* registers */
   /* continue assembling until the last input file is done */
   for (file = 0; file < infilecount; ++file)
     {
       int file_ended = 0;
-      sp = 0; /* clear stack */
+      sp = 0;			/* clear stack */
       stack[sp].line = 0;
       stack[sp].shouldclose = 0;
       stack[sp].name = infile[file].name;
@@ -2312,13 +2350,13 @@ assemble (void)
 	  stack[sp].file = fopen (infile[file].name, "r");
 	  if (!stack[sp].file)
 	    {
-	      printerr ("unable to open %s. skipping\n",
-			infile[file].name);
+	      printerr ("unable to open %s. skipping\n", infile[file].name);
 	      continue;
 	    }
 	  stack[sp].shouldclose = 1;
 	}
-      if (havelist) fprintf (listfile, "# File %s\n", stack[sp].name);
+      if (havelist)
+	fprintf (listfile, "# File %s\n", stack[sp].name);
       if (buffer)
 	buffer[0] = 0;
       /* loop until this source file is done */
@@ -2335,9 +2373,12 @@ assemble (void)
 		    {
 		      printerr ("ignoring junk at end of line: %s\n", ptr);
 		    }
-		  if (listdepth < 8) tabs = 3;
-		  else if (listdepth < 16) tabs = 2;
-		  else tabs = 1;
+		  if (listdepth < 8)
+		    tabs = 3;
+		  else if (listdepth < 16)
+		    tabs = 2;
+		  else
+		    tabs = 1;
 		  for (i = 0; i < tabs; ++i)
 		    fputc ('\t', listfile);
 		  fprintf (listfile, "%s\n", buffer);
@@ -2347,19 +2388,20 @@ assemble (void)
 	  /* throw away the rest of the file after end */
 	  if (file_ended)
 	    {
-	      while (read_line () )
+	      while (read_line ())
 		{
 		  if (havelist)
 		    fprintf (listfile, "\t\t\t%s\n", buffer);
 		}
 	      file_ended = 0;
 	    }
-	  while (!read_line () )
+	  while (!read_line ())
 	    {
 	      struct reference *ref;
 	      struct label *next;
-	      if (verbose > 3) fprintf (stderr, "finished reading file %s\n",
-					stack[sp].name);
+	      if (verbose > 3)
+		fprintf (stderr, "finished reading file %s\n",
+			 stack[sp].name);
 	      if (havelist)
 		{
 		  if (stack[sp].file)
@@ -2367,7 +2409,8 @@ assemble (void)
 		  else
 		    fprintf (listfile, "# End of macro %s\n", stack[sp].name);
 		}
-	      if (stack[sp].shouldclose) fclose (stack[sp].file);
+	      if (stack[sp].shouldclose)
+		fclose (stack[sp].file);
 	      /* the top of stack is about to be popped off, throwing all
 	       * local labels out of scope.  All references at this level
 	       * which aren't computable are errors.  */
@@ -2392,8 +2435,10 @@ assemble (void)
 		  break;
 		}
 	    }
-	  if (!cont) break; /* break to next source file */
-	  if (havelist) fprintf (listfile, "%04x", addr);
+	  if (!cont)
+	    break;		/* break to next source file */
+	  if (havelist)
+	    fprintf (listfile, "%04x", addr);
 	  for (bufptr = buffer; (bufptr = strchr (bufptr, '\n'));)
 	    *bufptr = ' ';
 	  for (bufptr = buffer; (bufptr = strchr (bufptr, '\r'));)
@@ -2444,7 +2489,9 @@ assemble (void)
 	      char *newptr;
 	      struct macro_line **current_line;
 	      for (current_line = &firstmacro->lines; *current_line;
-		   current_line = &(*current_line)->next) {}
+		   current_line = &(*current_line)->next)
+		{
+		}
 	      *current_line = malloc (sizeof (struct macro_line));
 	      if (!*current_line)
 		{
@@ -3067,15 +3114,16 @@ assemble (void)
 			  write_one_byte (rd_character (&ptr), 0);
 			  if (*ptr == 0)
 			    {
-			      printerr ("end of line in quoted "
-					"string\n");
+			      printerr ("end of line in quoted " "string\n");
 			      break;
 			    }
 			}
-		      if (!*ptr) break;
+		      if (!*ptr)
+			break;
 		      ++ptr;
 		      ptr = delspc (ptr);
-		      if (!*ptr) break;
+		      if (!*ptr)
+			break;
 		      if (*ptr++ != ',')
 			{
 			  printerr ("expected end of line or ',' (not %c)\n",
@@ -3087,8 +3135,9 @@ assemble (void)
 		    }
 		  new_reference (readbyte, TYPE_ABSB, ',', 1);
 		  ptr = delspc (ptr);
-		} while ((have_quote = (*ptr == '"' || *ptr == '\''))
-			 || rd_byte (&ptr, ','));
+		}
+	      while ((have_quote = (*ptr == '"' || *ptr == '\''))
+		     || rd_byte (&ptr, ','));
 	      writebyte = 0;
 	      break;
 	    case DEFW:
@@ -3146,7 +3195,7 @@ assemble (void)
 		      fprintf (stderr, "Stack dump:\nframe  line file\n");
 		      for (x = 0; x < MAX_INCLUDE; ++x)
 			fprintf (stderr, "%5d %5d %s\n", x, stack[x].line,
-				stack[x].name);
+				 stack[x].name);
 		    }
 		  break;
 		}
@@ -3179,7 +3228,8 @@ assemble (void)
 		  }
 		name->next = firstname;
 		name->prev = NULL;
-		if (name->next) name->next->prev = name;
+		if (name->next)
+		  name->next->prev = name;
 		firstname = name;
 		if (verbose > 1)
 		  fprintf (stderr, "Reading file %s\n", name->name);
@@ -3204,10 +3254,10 @@ assemble (void)
 		    size_t num = fread (filebuffer, 1, 4096, incfile);
 		    if (num == 0)
 		      break;
-		    if (num != fwrite (filebuffer, 1, num, outfile) )
+		    if (num != fwrite (filebuffer, 1, num, outfile))
 		      {
 			printerr ("error including binary file %s: %s\n",
-				  name, strerror (errno) );
+				  name, strerror (errno));
 			break;
 		      }
 		    addr += num;
@@ -3237,7 +3287,10 @@ assemble (void)
 		  printerr ("endif without if\n");
 		  break;
 		}
-	      if (noifcount) noifcount--; else ifcount--;
+	      if (noifcount)
+		noifcount--;
+	      else
+		ifcount--;
 	      break;
 	    case MACRO:
 	      if (!lastlabel)
@@ -3430,5 +3483,6 @@ main (int argc, char **argv)
 	}
       return 1;
     }
-  else return 0;
+  else
+    return 0;
 }
