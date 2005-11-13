@@ -41,10 +41,10 @@
 enum mnemonic
 {
   CALL, CPDR, CPIR, DJNZ, HALT, INDR, INIR, LDDR, LDIR, OTDR, OTIR, OUTD,
-    OUTI, PUSH, RETI, RETN, RLCA, RRCA, DEFB, DEFW, DEFS, DEFM,
+  OUTI, PUSH, RETI, RETN, RLCA, RRCA, DEFB, DEFW, DEFS, DEFM,
   ADC, ADD, AND, BIT, CCF, CPD, CPI, CPL, DAA, DEC, EQU, EXX, INC, IND, INI,
-    LDD, LDI, NEG, NOP, OUT, POP, RES, RET, RLA, RLC, RLD, RRA, RRC, RRD, RST,
-    SBC, SCF, SET, SLA, SLL, SLI, SRA, SRL, SUB, XOR, ORG,
+  LDD, LDI, NEG, NOP, OUT, POP, RES, RET, RLA, RLC, RLD, RRA, RRC, RRD, RST,
+  SBC, SCF, SET, SLA, SLL, SLI, SRA, SRL, SUB, XOR, ORG,
   CP, DI, EI, EX, IM, IN, JP, JR, LD, OR, RL, RR, DB, DW, DS, DM,
   INCLUDE, INCBIN, IF, ELSE, ENDIF, END, MACRO, ENDM
 };
@@ -160,14 +160,14 @@ struct reference
 /* mnemonics, used as argument to indx() in assemble */
 const char *mnemonics[] = {
   "call", "cpdr", "cpir", "djnz", "halt", "indr", "inir", "lddr", "ldir",
-    "otdr", "otir", "outd", "outi", "push", "reti", "retn", "rlca", "rrca",
-    "defb", "defw", "defs", "defm",
+  "otdr", "otir", "outd", "outi", "push", "reti", "retn", "rlca", "rrca",
+  "defb", "defw", "defs", "defm",
   "adc", "add", "and", "bit", "ccf", "cpd", "cpi", "cpl", "daa", "dec", "equ",
-    "exx", "inc", "ind", "ini", "ldd", "ldi", "neg", "nop", "out", "pop",
-    "res", "ret", "rla", "rlc", "rld", "rra", "rrc", "rrd", "rst", "sbc",
-    "scf", "set", "sla", "sll", "sli", "sra", "srl", "sub", "xor", "org",
+  "exx", "inc", "ind", "ini", "ldd", "ldi", "neg", "nop", "out", "pop",
+  "res", "ret", "rla", "rlc", "rld", "rra", "rrc", "rrd", "rst", "sbc",
+  "scf", "set", "sla", "sll", "sli", "sra", "srl", "sub", "xor", "org",
   "cp", "di", "ei", "ex", "im", "in", "jp", "jr", "ld", "or", "rl", "rr",
-    "db", "dw", "ds", "dm",
+  "db", "dw", "ds", "dm",
   "include", "incbin", "if", "else", "endif", "end", "macro", "endm",
   NULL
 };
@@ -384,7 +384,7 @@ open_include_file (const char *name, struct includedir **dir,
 static void
 open_infile (const char *name)
 {
-  infile = realloc (infile, sizeof (struct infile) * (infilecount + 1))
+  infile = realloc (infile, sizeof (struct infile) * (infilecount + 1));
   if (!infile)
     {
       fprintf (stderr, "Error: insufficient memory\n");
@@ -1004,7 +1004,8 @@ check_label (struct label *labels, const char **p, struct label **ret,
 	       * caller that it doesn't exist, so it will try again later.
 	       * Set ret to show actual existence.  */
 	      if (verbose >= 4)
-		fprintf (stderr, "%5d (0x%04x): returning invalid label %s.\n",
+		fprintf (stderr,
+			 "%5d (0x%04x): returning invalid label %s.\n",
 			 stack[sp].line, addr, l->name);
 	      *ret = l;
 	      return 0;
