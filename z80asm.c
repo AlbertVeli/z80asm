@@ -278,6 +278,14 @@ rd_comma (const char **p)
   *p = delspc ((*p) + 1);
 }
 
+/* look ahead for a comma, no error if not found */
+static int
+has_argument (const char **p)
+{
+  const char *q = delspc (*p);
+  return (*q == ',');
+}
+
 /* During assembly, many literals are not parsed.  Instead, they are saved
  * until all labels are read.  After that, they are parsed.  This function
  * is used during assembly, to find the place where the command continues. */
@@ -1823,6 +1831,43 @@ rd_a_hlx (const char **p)
   return 2;
 }
 
+/* read b,c,d,e,h,l,(hl),a,(ix+nn),(iy+nn),nn 
+ * but now with extra hl or i[xy](15) for add-instruction
+ * and set variables accordingly */
+static int
+rd_r_add (const char **p)
+{
+#define addHL 	15
+  int i;
+  const char *list[] = {
+    "ixl", "ixh", "iyl", "iyh", "b", "c", "d", "e", "h", "l",
+    "(hl)", "a", "(ix", "(iy", "hl", "ix", "iy", NULL
+  };
+  i = indx (p, list, 0);
+  if (!i)			// not in list ? assume "nn"
+    {
+      rd_byte (p, '\0');
+      return 7;
+    }
+  if (i > 14)			// 15,16,17
+    {
+      if (i > 15)
+	indexed = 0xDD + 0x20 * (i - 16);
+      return addHL;
+    }
+  if (i <= 4)			// 8-bit access of ix/iy
+    {
+      indexed = 0xdd + 0x20 * (i > 2);
+      return 6 - (i & 1);
+    }
+  i -= 4;
+  if (i < 9)
+    return i;
+  indexed = 0xDD + 0x20 * (i - 9);	// 16-bit access of ix/iy
+  rd_index (p);
+  return 7;
+}
+
 /* read bc,de,hl, or sp */
 static int
 rd_rr_ (const char **p)
@@ -2576,18 +2621,28 @@ assemble (void)
 	      wrtb (0x88 + --r);
 	      break;
 	    case ADD:
-	      if (!(r = rd_a_hlx (&ptr)))
+	      if (!(r = rd_r_add (&ptr)))
 		break;
-	      if (r == HL)
+	      if (r == addHL)
 		{
 		  if (!(r = rd_rrxx (&ptr)))
 		    break;
-		  wrtb (0x09 + 0x10 * --r);
+		  wrtb (0x09 + 0x10 * --r);	// ADD HL/IX/IY, qq 
 		  break;
 		}
-	      if (!(r = rd_r (&ptr)))
-		break;
-	      wrtb (0x80 + --r);
+	      if (has_argument (&ptr))
+		{
+		  if (r != A)
+		    {
+		      printerr ("parse error before: %s\n", ptr);
+		      break;
+		    }
+		  if (!(r = rd_r (&ptr)))
+		    break;
+		  wrtb (0x80 + --r);	// ADD A,r
+		  break;
+		}
+	      wrtb (0x80 + --r);	// ADD r 
 	      break;
 	    case AND:
 	      if (!(r = rd_r (&ptr)))
@@ -3093,6 +3148,16 @@ assemble (void)
 	    case SUB:
 	      if (!(r = rd_r (&ptr)))
 		break;
+	      if (has_argument (&ptr))	// SUB A,r ?  
+		{
+		  if (r != A)
+		    {
+		      printerr ("parse error before: %s\n", ptr);
+		      break;
+		    }
+		  if (!(r = rd_r (&ptr)))
+		    break;
+		}
 	      wrtb (0x90 + --r);
 	      break;
 	    case XOR:
