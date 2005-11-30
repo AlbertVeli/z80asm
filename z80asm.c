@@ -1,6 +1,7 @@
 /* Z80 assembler by shevek
 
    Copyright (C) 2002-2005 Bas Wijnen <shevek@fmf.nl>
+   Copyright (C) 2005 Jan Wilmans <jw@dds.nl>
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
@@ -240,6 +241,12 @@ printerr (const char *fmt, ...)
 {
   va_list l;
   va_start (l, fmt);
+  if ((sp < 0) || (stack[sp].name == 0))
+    {
+      fprintf (stderr,
+	       "internal assembler error (null-pointer), sp == %i\n", sp);
+      exit (2);
+    }
   fprintf (stderr, "%s%s:%d: ", stack[sp].dir ? stack[sp].dir->name : "",
 	   stack[sp].name, stack[sp].line);
   vfprintf (stderr, fmt, l);
@@ -393,7 +400,7 @@ open_infile (const char *name)
   /* only asm is currently supported */
   infile[infilecount].type = FILETYPE_ASM;
   infile[infilecount].name = name;
-  if (verbose > 2)
+  if (verbose >= 5)
     fprintf (stderr, "queued inputfile %s\n", infile[infilecount].name);
   infilecount++;
 }
@@ -517,6 +524,8 @@ parse_commandline (int argc, char **argv)
 	  printf ("Z80 assembler version " VERSION "\n"
 		  "Copyright (C) 2002-2005 Bas Wijnen "
 		  "<shevek@fmf.nl>.\n"
+		  "Copyright (C) 2005 Jan Wilmans "
+		  "<jw@dds.nl>.\n"
 		  "This program comes with ABSOLUTELY NO WARRANTY.\n"
 		  "You may distribute copies of the program under the terms\n"
 		  "of the GNU General Public License as published by\n"
@@ -527,14 +536,14 @@ parse_commandline (int argc, char **argv)
 	  exit (0);
 	case 'v':
 	  verbose++;
-	  if (verbose > 2)
+	  if (verbose >= 5)
 	    fprintf (stderr, "Verbosity increased to level %d\n", verbose);
 	  break;
 	case 'o':
 	  realoutputfile
 	    = openfile (&out, "output file", stdout, optarg, "wb");
 	  realoutputfilename = optarg;
-	  if (verbose > 2)
+	  if (verbose >= 5)
 	    fprintf (stderr, "Opened outputfile\n");
 	  break;
 	case 'i':
@@ -543,13 +552,13 @@ parse_commandline (int argc, char **argv)
 	case 'l':
 	  reallistfile
 	    = openfile (&havelist, "list file", stderr, optarg, "w");
-	  if (verbose > 2)
+	  if (verbose >= 5)
 	    fprintf (stderr, "Opened list file\n");
 	  break;
 	case 'L':
 	  labelfile = openfile (&label, "label file", stderr, optarg, "w");
 	  labelfilename = optarg;
-	  if (verbose > 2)
+	  if (verbose >= 5)
 	    fprintf (stderr, "Opened label file\n");
 	  break;
 	case 'p':
@@ -605,10 +614,10 @@ indx (const char **ptr, const char **list, int error)
 	  && (!isalnum ((*ptr)[l]) || !isalnum (list[i][l - 1])))
 	{
 	  (*ptr) += l;
-	  if (verbose >= 2)
+	  if (verbose >= 4)
 	    fprintf (stderr, "%5d (0x%04x): Piece of code found:%s\n",
 		     stack[sp].line, addr, list[i]);
-	  if (verbose >= 4)
+	  if (verbose >= 6)
 	    fprintf (stderr, "%5d (0x%04x): Remainder of line=%s.\n",
 		     stack[sp].line, addr, *ptr);
 	  comma++;
@@ -618,7 +627,7 @@ indx (const char **ptr, const char **list, int error)
   if (error)
     {
       printerr ("parse error. Remainder of line=%s\n", *ptr);
-      if (verbose >= 1)
+      if (verbose >= 3)
 	{
 	  fprintf (stderr, "When looking for any of:\n");
 	  for (i = 0; list[i]; i++)
@@ -682,7 +691,7 @@ readlabel (const char **p, int store)
     }
   strncpy (buf->name, *p, c - *p - 1);
   buf->name[c - *p - 1] = 0;
-  if (verbose >= 1)
+  if (verbose >= 3)
     fprintf (stderr, "%5d (0x%04x): Label found: %s\n", stack[sp].line,
 	     addr, buf->name);
   *p = c;
@@ -715,7 +724,7 @@ static void new_reference (const char *data, int type, char delimiter,
 static void
 write_one_byte (int b, int list)
 {
-  if (verbose >= 2)
+  if (verbose >= 4)
     fprintf (stderr,
 	     "%5d (0x%04x): write_one_byte called with argument 0x%02x\n",
 	     stack[sp].line, addr, b);
@@ -733,12 +742,12 @@ write_one_byte (int b, int list)
 static void
 wrtb (int b)
 {
-  if (verbose >= 2)
+  if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): wrtb called with argument 0x%02x\n",
 	     stack[sp].line, addr, b);
   if (indexed)
     {
-      if (verbose >= 3)
+      if (verbose >= 5)
 	fprintf (stderr, "%5d (0x%04x): writing indexed byte 0x%02x\n",
 		 stack[sp].line, addr, indexed);
       write_one_byte (indexed, 1);
@@ -746,12 +755,12 @@ wrtb (int b)
     }
   if (writebyte)
     {
-      if (verbose >= 3)
+      if (verbose >= 5)
 	fprintf (stderr, "%5d (0x%04x): using a xor on byte because there is "
 		 "a writebyte.\n", stack[sp].line, addr);
       b ^= 0x40;
     }
-  if (verbose >= 3)
+  if (verbose >= 5)
     fprintf (stderr, "%5d (0x%04x): writing byte 0x%02x\n", stack[sp].line,
 	     addr, b);
   if (bitsetres && b != 0xCB)
@@ -765,7 +774,7 @@ wrtb (int b)
     }
   if (indexjmp)
     {
-      if (verbose >= 3)
+      if (verbose >= 5)
 	fprintf (stderr, "%5d (0x%04x): Making reference for index/jump %s\n",
 		 stack[sp].line, addr, indexjmp);
       new_reference (indexjmp, TYPE_ABSB, ')', 1);
@@ -773,7 +782,7 @@ wrtb (int b)
     }
   if (writebyte)
     {
-      if (verbose >= 3)
+      if (verbose >= 5)
 	fprintf (stderr, "%5d (0x%04x): writing argument byte for padding\n",
 		 stack[sp].line, addr);
       writebyte = 0;
@@ -800,7 +809,7 @@ rd_number (const char **p, const char **endp, int base)
 {
   int result = 0, i;
   char *c, num[] = "0123456789abcdefghijklmnopqrstuvwxyz";
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read number of base %d"
 	     "(string=%s).\n", stack[sp].line, addr, base, *p);
   num[base] = '\0';
@@ -808,7 +817,7 @@ rd_number (const char **p, const char **endp, int base)
   while (**p && (c = strchr (num, tolower (**p))))
     {
       i = c - num;
-      if (verbose >= 5)
+      if (verbose >= 7)
 	fprintf (stderr, "%5d (0x%04x): Digit found:%1x.\n", stack[sp].line,
 		 addr, i);
       result = result * base + i;
@@ -817,7 +826,7 @@ rd_number (const char **p, const char **endp, int base)
   if (endp)
     *endp = *p;
   *p = delspc (*p);
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_number returned %d (%04x).\n",
 	     stack[sp].line, addr, result, result);
   return result;
@@ -827,7 +836,7 @@ static int
 rd_otherbasenumber (const char **p)
 {
   char c;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr,
 	     "%5d (0x%04x): Starting to read basenumber (string=%s).\n",
 	     stack[sp].line, addr, *p);
@@ -853,7 +862,7 @@ static int
 rd_character (const char **p)
 {
   int i;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr,
 	     "%5d (0x%04x): Starting to read character (string=%s).\n",
 	     stack[sp].line, addr, *p);
@@ -917,7 +926,7 @@ rd_character (const char **p)
     }
   else
     (*p)++;
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_character returned %d (%c).\n",
 	     stack[sp].line, addr, i, i);
   return i;
@@ -938,7 +947,7 @@ compute_ref (struct reference *ref, int allow_invalid)
   addr = ref->addr;
   comma = ref->comma;
   file = ref->infile;
-  if (verbose >= 1)
+  if (verbose >= 3)
     fprintf (stderr, "%5d (0x%04x): Making reference to %s (done=%d, "
 	     "computed=%d)\n",
 	     stack[sp].line, addr, ref->input, ref->done,
@@ -952,7 +961,7 @@ compute_ref (struct reference *ref, int allow_invalid)
       if (valid)
 	ref->done = 1;
     }
-  if (verbose >= 2)
+  if (verbose >= 4)
     fprintf (stderr, "%5d (0x%04x): Reference is %d (0x%04x).\n",
 	     stack[sp].line, addr, ref->computed_value, ref->computed_value);
   sp = backup_sp;
@@ -1003,7 +1012,7 @@ check_label (struct label *labels, const char **p, struct label **ret,
 	      /* label was not valid, and isn't computable.  tell the
 	       * caller that it doesn't exist, so it will try again later.
 	       * Set ret to show actual existence.  */
-	      if (verbose >= 4)
+	      if (verbose >= 6)
 		fprintf (stderr,
 			 "%5d (0x%04x): returning invalid label %s.\n",
 			 stack[sp].line, addr, l->name);
@@ -1028,7 +1037,7 @@ rd_label (const char **p, int *exists, struct label **previous, int level)
     *exists = 0;
   if (previous)
     *previous = NULL;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read label (string=%s).\n",
 	     stack[sp].line, addr, *p);
   for (s = level; s >= 0; --s)
@@ -1048,14 +1057,14 @@ rd_label (const char **p, int *exists, struct label **previous, int level)
 	  if (!exists)
 	    printerr ("using undefined label %.*s\n", *p - old_p, old_p);
 	  /* Return a value to discriminate between non-existing and invalid */
-	  if (verbose >= 5)
+	  if (verbose >= 7)
 	    fprintf (stderr, "rd_label returns invalid value\n");
 	  return l != NULL;
 	}
     }
   if (exists)
     *exists = 1;
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "rd_label returns valid value 0x%x\n", l->value);
   return l->value;
 }
@@ -1065,7 +1074,7 @@ rd_value (const char **p, int *valid, int level)
 {
   int sign = 1, not = 0, base, v;
   const char *p0, *p1, *p2;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read value (string=%s).\n",
 	     stack[sp].line, addr, *p);
   *p = delspc (*p);
@@ -1204,7 +1213,7 @@ rd_factor (const char **p, int *valid, int level)
 {
   /* read a factor of an expression */
   int result;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read factor (string=%s).\n",
 	     stack[sp].line, addr, *p);
   result = rd_value (p, valid, level);
@@ -1223,7 +1232,7 @@ rd_factor (const char **p, int *valid, int level)
 	}
       *p = delspc (*p);
     }
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_factor returned %d (%04x).\n",
 	     stack[sp].line, addr, result, result);
   return result;
@@ -1234,7 +1243,7 @@ rd_term (const char **p, int *valid, int level)
 {
   /* read a term of an expression */
   int result;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read term (string=%s).\n",
 	     stack[sp].line, addr, *p);
   result = rd_factor (p, valid, level);
@@ -1253,7 +1262,7 @@ rd_term (const char **p, int *valid, int level)
 	}
       *p = delspc (*p);
     }
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_term returned %d (%04x).\n",
 	     stack[sp].line, addr, result, result);
   return result;
@@ -1263,7 +1272,7 @@ static int
 rd_expr_shift (const char **p, int *valid, int level)
 {
   int result;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read shift expression "
 	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_term (p, valid, level);
@@ -1282,7 +1291,7 @@ rd_expr_shift (const char **p, int *valid, int level)
 	}
       *p = delspc (*p);
     }
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_shift returned %d (%04x).\n",
 	     stack[sp].line, addr, result, result);
   return result;
@@ -1292,7 +1301,7 @@ static int
 rd_expr_unequal (const char **p, int *valid, int level)
 {
   int result;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read "
 	     "unequality expression (string=%s).\n", stack[sp].line, addr,
 	     *p);
@@ -1318,7 +1327,7 @@ rd_expr_unequal (const char **p, int *valid, int level)
       (*p)++;
       return result > rd_expr_unequal (p, valid, level);
     }
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_shift returned %d (%04x).\n",
 	     stack[sp].line, addr, result, result);
   return result;
@@ -1328,7 +1337,7 @@ static int
 rd_expr_equal (const char **p, int *valid, int level)
 {
   int result;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read equality epression "
 	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_expr_unequal (p, valid, level);
@@ -1345,7 +1354,7 @@ rd_expr_equal (const char **p, int *valid, int level)
       (*p) += 2;
       return result != rd_expr_equal (p, valid, level);
     }
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_equal returned %d (%04x).\n",
 	     stack[sp].line, addr, result, result);
   return result;
@@ -1355,7 +1364,7 @@ static int
 rd_expr_and (const char **p, int *valid, int level)
 {
   int result;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read and expression "
 	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_expr_equal (p, valid, level);
@@ -1365,7 +1374,7 @@ rd_expr_and (const char **p, int *valid, int level)
       (*p)++;
       result &= rd_expr_and (p, valid, level);
     }
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_expr_and returned %d (%04x).\n",
 	     stack[sp].line, addr, result, result);
   return result;
@@ -1375,11 +1384,11 @@ static int
 rd_expr_xor (const char **p, int *valid, int level)
 {
   int result;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read xor expression "
 	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_expr_and (p, valid, level);
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_expr_xor: rd_expr_and returned %d "
 	     "(%04x).\n", stack[sp].line, addr, result, result);
   *p = delspc (*p);
@@ -1388,7 +1397,7 @@ rd_expr_xor (const char **p, int *valid, int level)
       (*p)++;
       result ^= rd_expr_xor (p, valid, level);
     }
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_expr_xor returned %d (%04x).\n",
 	     stack[sp].line, addr, result, result);
   return result;
@@ -1398,11 +1407,11 @@ static int
 rd_expr_or (const char **p, int *valid, int level)
 {
   int result;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr, "%5d (0x%04x): Starting to read or expression "
 	     "(string=%s).\n", stack[sp].line, addr, *p);
   result = rd_expr_xor (p, valid, level);
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_expr_or: rd_expr_xor returned %d "
 	     "(%04x).\n", stack[sp].line, addr, result, result);
   *p = delspc (*p);
@@ -1411,7 +1420,7 @@ rd_expr_or (const char **p, int *valid, int level)
       (*p)++;
       result |= rd_expr_or (p, valid, level);
     }
-  if (verbose >= 5)
+  if (verbose >= 7)
     fprintf (stderr, "%5d (0x%04x): rd_expr_or returned %d (%04x).\n",
 	     stack[sp].line, addr, result, result);
   return result;
@@ -1422,7 +1431,7 @@ rd_expr (const char **p, char delimiter, int *valid, int level)
 {
   /* read an expression. delimiter can _not_ be '?' */
   int result = 0;
-  if (verbose >= 4)
+  if (verbose >= 6)
     fprintf (stderr,
 	     "%5d (0x%04x): Starting to read expression (string=%s).\n",
 	     stack[sp].line, addr, *p);
@@ -1459,7 +1468,7 @@ rd_expr (const char **p, char delimiter, int *valid, int level)
     {
       printerr ("ignoring junk at end of expression: %s\n", *p);
     }
-  if (verbose >= 5)
+  if (verbose >= 7)
     {
       fprintf (stderr, "%5d (0x%04x): rd_expr returned %d (%04x).\n",
 	       stack[sp].line, addr, result, result);
@@ -1485,7 +1494,7 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
   value = rd_expr (&c, delimiter, &valid, sp);
   if (valid)
     {
-      if (verbose >= 3)
+      if (verbose >= 5)
 	{
 	  fprintf (stderr, "%5d (0x%04x): Using calculated value %d (%x) "
 		   "immediately.\n", stack[sp].line, addr, value, value);
@@ -1502,7 +1511,7 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
 	}
       opos = ftell (outfile);
       lpos = havelist ? ftell (listfile) : 0;
-      if (verbose >= 1)
+      if (verbose >= 3)
 	fprintf (stderr, "%5d (0x%04x): reference set to %s (delimiter=%c)\n",
 		 stack[sp].line, addr, p, delimiter);
       strcpy (tmp->input, p);
@@ -2400,7 +2409,7 @@ assemble (void)
 	    {
 	      struct reference *ref;
 	      struct label *next;
-	      if (verbose > 3)
+	      if (verbose >= 6)
 		fprintf (stderr, "finished reading file %s\n",
 			 stack[sp].name);
 	      if (havelist)
@@ -2541,7 +2550,7 @@ assemble (void)
 		  *newptr++ = *ptr++;
 		}
 	      *newptr = 0;
-	      if (verbose >= 5)
+	      if (verbose >= 7)
 		fprintf (stderr, "added line to macro (cmd = %d): %s\n", cmd,
 			 (*current_line)->line);
 	      if (cmd == ENDM)
@@ -2662,7 +2671,7 @@ assemble (void)
 		  break;
 		}
 	      new_reference (ptr, TYPE_LABEL, 0, 0);
-	      if (verbose >= 2)
+	      if (verbose >= 4)
 		{
 		  if (lastlabel->valid)
 		    fprintf (stderr, "Assigned value %d to label %s.\n",
@@ -3190,7 +3199,7 @@ assemble (void)
 	      if (sp + 1 >= MAX_INCLUDE)
 		{
 		  printerr ("stack overflow (circular include?)");
-		  if (verbose > 2)
+		  if (verbose >= 5)
 		    {
 		      int x;
 		      fprintf (stderr, "Stack dump:\nframe  line file\n");
@@ -3232,7 +3241,7 @@ assemble (void)
 		if (name->next)
 		  name->next->prev = name;
 		firstname = name;
-		if (verbose > 1)
+		if (verbose >= 4)
 		  fprintf (stderr, "Reading file %s\n", name->name);
 	      }
 	      break;
@@ -3357,7 +3366,7 @@ assemble (void)
 			if (sp + 1 >= MAX_INCLUDE)
 			  {
 			    printerr ("stack overflow (circular include?)\n");
-			    if (verbose > 2)
+			    if (verbose >= 5)
 			      {
 				int x;
 				fprintf (stderr,
@@ -3470,6 +3479,8 @@ main (int argc, char **argv)
   /* default include file location */
   add_include ("/usr/share/z80asm/headers/");
   parse_commandline (argc, argv);
+  if (verbose >= 1)
+    fprintf (stderr, "Assembling....\n");
   assemble ();
   if (errors)
     {
@@ -3485,5 +3496,9 @@ main (int argc, char **argv)
       return 1;
     }
   else
-    return 0;
+    {
+      if (verbose >= 1)
+	fprintf (stderr, "Assembly succesful.\n");
+      return 0;
+    }
 }

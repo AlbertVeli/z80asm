@@ -1,3 +1,7 @@
+2005-11-29  Jan Wilmans  <jw@dds.nl>
+
+	* z80asm.c: Added two extra verbosity levels.
+
 2005-11-13  Bas Wijnen  <shevek@fmf.nl>
 
 	* z80asm.c: Run indent.
