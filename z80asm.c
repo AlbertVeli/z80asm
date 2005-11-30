@@ -47,7 +47,7 @@ enum mnemonic
   LDD, LDI, NEG, NOP, OUT, POP, RES, RET, RLA, RLC, RLD, RRA, RRC, RRD, RST,
   SBC, SCF, SET, SLA, SLL, SLI, SRA, SRL, SUB, XOR, ORG,
   CP, DI, EI, EX, IM, IN, JP, JR, LD, OR, RL, RR, DB, DW, DS, DM,
-  INCLUDE, INCBIN, IF, ELSE, ENDIF, END, MACRO, ENDM
+  INCLUDE, INCBIN, IF, ELSE, ENDIF, END, MACRO, ENDM, SEEK
 };
 
 /* types of reference */
@@ -170,7 +170,7 @@ const char *mnemonics[] = {
   "cp", "di", "ei", "ex", "im", "in", "jp", "jr", "ld", "or", "rl", "rr",
   "db", "dw", "ds", "dm",
   "include", "incbin", "if", "else", "endif", "end", "macro", "endm",
-  NULL
+  "seek", NULL
 };
 
 /* linked lists */
@@ -3355,6 +3355,20 @@ assemble (void)
 	      if (stack[sp].file)
 		printerr ("endm outside macro definition\n");
 	      break;
+	    case SEEK:
+	      {
+		unsigned int seekaddr = rd_expr (&ptr, '\0', NULL, sp);
+		if (verbose >= 2)
+		  {
+		    fprintf (stderr, "%s%s:%d: ",
+			     stack[sp].dir ? stack[sp].dir->name : "",
+			     stack[sp].name, stack[sp].line);
+		    fprintf (stderr, "[Message] seeking to 0x%0X \n",
+			     seekaddr);
+		  }
+		fseek (outfile, seekaddr, SEEK_SET);
+		break;
+	      }
 	    default:
 	      {
 		struct macro *m;

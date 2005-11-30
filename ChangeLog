@@ -1,3 +1,7 @@
+2005-11-30  Jan Wilmans  <jw@dds.nl>
+
+	* z80asm.c: Added new seek command
+
 2005-11-29  Jan Wilmans  <jw@dds.nl>
 
 	* z80asm.c: Added two extra verbosity levels.
