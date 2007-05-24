@@ -13,9 +13,9 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
 #include "z80asm.h"
@@ -741,6 +741,6 @@ rd_expr (const char **p, char delimiter, int *valid, int level,
   int check = 1;
   int result = do_rd_expr (p, delimiter, valid, level, &check, print_errors);
   if (print_errors && (!valid || *valid) && check)
-    printerr (0, "warning: expression fully enclosed in parenthesis\n");
+    printerr (0, "expression fully enclosed in parenthesis\n");
   return result;
 }

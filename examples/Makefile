@@ -4,4 +4,4 @@
 all: hello.rom macro.rom
 
 %.rom: %.asm
-	../z80asm -I ../headers $< -o $@
+	z80asm $< -o $@

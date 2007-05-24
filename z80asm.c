@@ -13,9 +13,9 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
 #include "z80asm.h"
@@ -377,8 +377,8 @@ parse_commandline (int argc, char **argv)
 		  "of the GNU General Public License as published by\n"
 		  "the Free Software Foundation; either version 2 of the\n"
 		  "License, or (at your option) any later version.\n\n"
-		  "For more information about these matters, see the file\n"
-		  "named COPYING.\n");
+		  "The complete text of the GPL can be found in\n"
+		  "/usr/share/common-licenses/GPL.\n");
 	  exit (0);
 	case 'v':
 	  verbose++;
