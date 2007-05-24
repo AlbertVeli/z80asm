@@ -1,3 +1,18 @@
+2007-05-24  Bas Wijnen  <wijnen@debian.org>
+
+	* VERSION: Updated to 1.3.
+	* tests, tests/pass.asm, tests/pass.correct-bin,
+	tests/pass.correct-err, tests/Makefile: Add test suite to spot
+	regressions.
+	* expressions.c, z80asm.h: New files, split from z80asm.c.
+	* Makefile: Updated.
+	* expressions.c, z80asm.c: Warn for value truncation, warn for
+	expressions fully in parenthesis, improve skipword so it doesn't break
+	on comments with parentheses, improve expression parsing so
+	"ld a, (1) + 1" doesn't result in an error.
+	* examples/macro.asm: Fixed to make it usable as a rom.
+	* z80asm.1: Updated.
+
 2005-11-30  Jan Wilmans  <jw@dds.nl>
 
 	* z80asm.c: Added unoffical syntax of ADD A,r as ADD r

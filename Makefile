@@ -16,18 +16,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 CC = gcc
-LDFLAGS = -O2 -Wall
-CFLAGS = -O2 -Wall -Wwrite-strings -Wcast-qual -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -pedantic -ansi -Wshadow -g -W -Ignulib
+CFLAGS = -O0 -Wall -Wwrite-strings -Wcast-qual -Wcast-align -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline -pedantic -ansi -Wshadow -ggdb3 -W -Ignulib
 SHELL = /bin/bash
 VERSION ?= $(shell echo -n `cat VERSION | cut -d. -f1`. ; echo $$[`cat VERSION | cut -d. -f2` + 1])
 
 all:z80asm
 
-z80asm:z80asm.c Makefile gnulib/getopt.o gnulib/getopt1.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -DVERSION=\"$(shell cat VERSION)\" $< gnulib/getopt.o gnulib/getopt1.o -o $@
+z80asm: z80asm.o expressions.o Makefile gnulib/getopt.o gnulib/getopt1.o
+	$(CC) $(LDFLAGS) $(filter %.o,$^) -o $@
+	$(MAKE) -C tests
 
-gnulib/%.o:gnulib/%.c gnulib/getopt.h Makefile
-	$(CC) $(CFLAGS) -c $< -o $@
+%.o:%.c z80asm.h gnulib/getopt.h Makefile
+	$(CC) $(CFLAGS) -c $< -o $@ -DVERSION=\"$(shell cat VERSION)\"
 
 clean:
 	for i in . gnulib examples headers ; do \

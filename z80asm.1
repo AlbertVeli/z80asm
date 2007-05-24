@@ -39,7 +39,8 @@ Show summary of options and exit.
 Display version information and exit.
 .TP
 .B \-v, \-\-verbose
-Be verbose.  Specify again to be more verbose.
+Be verbose.  Specify multiple times to be more verbose.  Messages are sent to
+standard error.
 .TP
 .BR "\-l, \-\-list" [=filename]
 Write a list file.  No filename or '-' means stderr.
@@ -64,9 +65,9 @@ priority), you don't have to specify it.
 .TP
 .B \-f, \-\-force
 Produce output even in case of errors.  Normally the output, list and label
-files are removed when the compilation is unsuccesful.
+files are removed when assembly is unsuccesful.
 
-.SH COMPILER DIRECTIVES
+.SH ASSEMBLER DIRECTIVES
 All mnemonics and registers are case insensitive.  All other text (in
 particular, labels and macros) are not.
 Undocumented opcodes are as much as possible supported:
@@ -93,8 +94,8 @@ escapes are allowed, as in characters in expressions.  Unlike the argument for
 include, the quotes must really be quotes (but they can be single or double
 quotes.  The closing quote must match the opening quote.)
 .PP
-defb/db and defm/dm are really aliases; either can take either
-quoted strings or numbers:
+defb/db and defm/dm are really aliases; either can take both
+quoted strings and numbers:
 .br
 defb "This text should be in a buffer\\r\\n", 0
 .TP
@@ -143,7 +144,9 @@ $, etc are passed as written (which means ~ will not be your home directory.)
 The filename is used as specified, and then prefixed with each directory in the include path, until it can be opened.
 .PP
 .RB "label: " macro " arg1, arg2, ..."
+.br
 code block
+.br
 .B endif
 .RS
 Define a macro.  The macro can be used where an opcode is expected.  The code
@@ -165,6 +168,12 @@ Set the "program counter" to address.  This does not add any bytes to the
 resulting binary, it only determines how the rest of the code is interpreted
 (in particular, the value of labels and
 .BR $ ).
+.TP
+.BR seek " offset"
+Seek to position offset in the output file.  This can be used for overwiting
+previously assembled code, for example for patching a binary which was included
+using
+.BR incbin .
 
 .SH EXPRESSIONS
 All expressions can use the following operators, in order of precedence:
@@ -248,13 +257,15 @@ defined labels may be used.  This is the case for:
 .TP
 \- The argument of org
 .TP
+\- The argument of seek
+.TP
 \- The argument of equ (eg, a label definition)
 .TP
 \- The first argument of ds
 .TP
 \- The argument of if
 .PP
-In all other expression, labels which are defined later may be used.
+In all other expressions, labels which are defined later may be used.
 .PP
 Labels must consist of letters, digits, underscores and periods, and must not
 start with a digit.  Labels are case sensitive.
@@ -266,12 +277,12 @@ Labels starting with a period (.) are
 macros, to prevent duplicate definitions when using a macro more than once.
 
 .SH EXIT STATUS
-At successful compilation, no output is produced (except the compilation
-result) and 0 is returned.  At any error, there is output on the standard
-error and 1 is returned.
+If assembly was successful, no output is produced (except the result, and
+messages triggered by --verbose) and 0 is returned.  At any error, there is
+output on the standard error and 1 is returned.
 
 .SH NOTES
-Parts that are not compiled because of an if statement and macros which are
+Parts that are not assembled because of an if statement and macros which are
 defined but never used are only checked to have a correct command. The
 argument is not parsed.  This means that if the file passes through the
 assembler with no warnings or errors, it may still not assemble correctly in
@@ -284,10 +295,15 @@ http://savannah.nongnu.org/projects/z80asm/
 .ny
 or send an e\-mail to
 .nh
-shevek@fmf.nl.
+wijnen@debian.org.
 .ny
 
 .SH AUTHOR
 Z80asm was written by Bas Wijnen
 .nh
-<shevek@fmf.nl>.
+<wijnen@debian.org>.
+.hy
+Some patches were provided by Jan Wilmans
+.nh
+<jw@dds.nl>
+.hy
