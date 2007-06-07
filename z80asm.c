@@ -1137,7 +1137,7 @@ static int
 rd_0_7 (const char **p)
 {
   *p = delspc (*p);
-  if (**p == 0 || **p == ';')
+  if (**p == 0)
     return 0;
   bitsetres = *p;
   skipword (p, ',');
@@ -1838,6 +1838,7 @@ assemble (void)
 	    case BIT:
 	      if (!rd_0_7 (&ptr))
 		break;
+	      rd_comma (&ptr);
 	      if (!(r = rd_r_ (&ptr)))
 		break;
 	      wrtb (0xCB);
@@ -2212,6 +2213,7 @@ assemble (void)
 	    case RES:
 	      if (!rd_0_7 (&ptr))
 		break;
+	      rd_comma (&ptr);
 	      if (!(r = rd_r_ (&ptr)))
 		break;
 	      wrtb (0xCB);
@@ -2302,6 +2304,7 @@ assemble (void)
 	    case SET:
 	      if (!rd_0_7 (&ptr))
 		break;
+	      rd_comma (&ptr);
 	      if (!(r = rd_r_ (&ptr)))
 		break;
 	      wrtb (0xCB);

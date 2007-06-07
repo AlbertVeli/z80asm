@@ -1,3 +1,8 @@
+2007-06-05  Bas Wijnen  <shevek@fmf.nl>
+
+	* VERSION: Updated to 1.4
+	* z80asm.c: Fix bit/set/res instructions.
+
 2007-05-24  Bas Wijnen  <wijnen@debian.org>
 
 	* VERSION: Updated to 1.3.
