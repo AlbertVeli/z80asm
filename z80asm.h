@@ -1,6 +1,6 @@
 /* Z80 assembler by shevek
 
-   Copyright (C) 2002-2007 Bas Wijnen <wijnen@debian.org>
+   Copyright (C) 2002-2007 Bas Wijnen <shevek@fmf.nl>
    Copyright (C) 2005 Jan Wilmans <jw@dds.nl>
 
    This program is free software; you can redistribute it and/or
@@ -151,6 +151,7 @@ struct reference
   long lseekpos;		/* position in listfile for data */
   char delimiter;		/* delimiter for parser */
   int addr, line;		/* address and line of reference */
+  int baseaddr;			/* address at start of line of reference */
   int comma;			/* comma when reference was set */
   int count;			/* only for ds: number of items */
   int infile;			/* index in infile[], current infile */

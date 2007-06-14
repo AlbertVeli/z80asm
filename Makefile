@@ -24,7 +24,7 @@ all:z80asm
 
 z80asm: z80asm.o expressions.o Makefile gnulib/getopt.o gnulib/getopt1.o
 	$(CC) $(LDFLAGS) $(filter %.o,$^) -o $@
-	$(MAKE) -C tests
+	$(MAKE) -C tests || rm $@
 
 %.o:%.c z80asm.h gnulib/getopt.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@ -DVERSION=\"$(shell cat VERSION)\"

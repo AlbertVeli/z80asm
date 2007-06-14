@@ -678,11 +678,13 @@ compute_ref (struct reference *ref, int allow_invalid)
   const char *ptr;
   int valid = 0;
   int backup_addr = addr;
+  int backup_baseaddr = baseaddr;
   int backup_comma = comma;
   int backup_file = file;
   int backup_sp = sp;
   sp = ref->level;
   addr = ref->addr;
+  baseaddr = ref->baseaddr;
   comma = ref->comma;
   file = ref->infile;
   if (verbose >= 3)
@@ -704,6 +706,7 @@ compute_ref (struct reference *ref, int allow_invalid)
 	     stack[sp].line, addr, ref->computed_value, ref->computed_value);
   sp = backup_sp;
   addr = backup_addr;
+  baseaddr = backup_baseaddr;
   comma = backup_comma;
   file = backup_file;
   return ref->computed_value;
@@ -744,7 +747,8 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
 	fprintf (stderr, "%5d (0x%04x): reference set to %s (delimiter=%c, "
 		 "sp=%d)\n", stack[sp].line, addr, p, delimiter, sp);
       strcpy (tmp->input, p);
-      tmp->addr = baseaddr;
+      tmp->addr = addr;
+      tmp->baseaddr = baseaddr;
       tmp->count = ds_count;
       tmp->infile = file;
       tmp->comma = comma;
@@ -1638,7 +1642,7 @@ assemble (void)
 	    }
 	  while (!read_line ())
 	    {
-	      struct reference *ref;
+	      struct reference *ref, *nextref;
 	      struct label *next;
 	      if (verbose >= 6)
 		fprintf (stderr, "finished reading file %s\n",
@@ -1655,11 +1659,25 @@ assemble (void)
 	      /* the top of stack is about to be popped off, throwing all
 	       * local labels out of scope.  All references at this level
 	       * which aren't computable are errors.  */
-	      for (ref = firstreference; ref; ref = ref->next)
+	      for (ref = firstreference; ref; ref = nextref)
 		{
+		  nextref = ref->next;
 		  compute_ref (ref, 1);
+		  if (ref->done)
+		    continue;
 		  if (ref->level == sp)
-		    --ref->level;
+		    if (!ref->level--)
+		      {
+			printerr (1, "unable to resolve reference: %s\n",
+				  ref->input);
+			if (ref->prev)
+			  ref->prev->next = ref->next;
+			else
+			  firstreference = ref->next;
+			if (ref->next)
+			  ref->next->prev = ref->prev;
+			free (ref);
+		      }
 		}
 	      /* Ok, now junk all local labels of the top stack level */
 	      for (l = stack[sp].labels; l; l = next)

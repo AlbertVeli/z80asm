@@ -11,3 +11,11 @@
 	ld de, -0x8001		; warning: 16-bit value truncated
 	ld b, -0x81		; warning: 8-bit value truncated
 	ld a, -0x80
+	halt
+	add hl, de
+	ex af, af'
+	jr z, $ + 4
+	defb 0, 4, 5, label - $
+label:
+	jr label + 2
+	db ';("', "'"
