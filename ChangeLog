@@ -1,4 +1,4 @@
-2007-06-05  Bas Wijnen  <shevek@fmf.nl>
+2007-06-14  Bas Wijnen  <shevek@fmf.nl>
 
 	* VERSION: Updated to 1.5
 	* z80asm.c, z80asm.h: Fix handling of $ in stored expressions (thanks
