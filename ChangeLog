@@ -1,3 +1,9 @@
+2007-09-09  Bas Wijnen  <shevek@fmf.nl>
+
+	* z80asm.c: Wrap program counter consistently.
+	* z80asm.c, z80asm.h: Fix error reporting in references.
+	* all files: Update license to GPL version 3 or later.
+
 2007-06-14  Bas Wijnen  <shevek@fmf.nl>
 
 	* VERSION: Updated to 1.5
