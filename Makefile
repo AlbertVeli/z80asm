@@ -38,8 +38,7 @@ clean:
 
 dist: clean
 	echo $(VERSION) > VERSION
-	rm -rf /tmp/z80asm-$(VERSION) /tmp/z80asm
-	tar cf - -C .. z80asm | tar xf - -C /tmp
-	find /tmp/z80asm -name CVS | xargs rm -rf
-	mv /tmp/z80asm /tmp/z80asm-$(VERSION)
+	rm -rf /tmp/z80asm-$(VERSION)
+	git archive --format=tar --prefix=z80asm-$(VERSION)/ HEAD | tar xf - -C /tmp
 	tar cvzf ../z80asm-$(VERSION).tar.gz -C /tmp z80asm-$(VERSION)
+	rm -r /tmp/z80asm-$(VERSION)
