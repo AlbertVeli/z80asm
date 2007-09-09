@@ -40,7 +40,7 @@ dist: clean
 	! git status | grep modified
 	echo $(VERSION) > VERSION
 	git add VERSION
-	git commit -m "Release version $(VERSION)"
+	-git commit -m "Release version $(VERSION)"
 	rm -rf /tmp/z80asm-$(VERSION)
 	git archive --format=tar --prefix=z80asm-$(VERSION)/ HEAD | tar xf - -C /tmp
 	tar cvzf ../z80asm-$(VERSION).tar.gz -C /tmp z80asm-$(VERSION)
