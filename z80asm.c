@@ -737,17 +737,42 @@ new_reference (const char *p, int type, char delimiter, int ds_count)
   else
     {
       /* the expression is not valid (yet), we need to make a real reference.  */
-      if (NULL == (tmp = malloc (sizeof (struct reference) + strlen (p))))
+      tmp = malloc (sizeof (struct reference) + strlen (p));
+      if (!tmp)
 	{
 	  printerr (1, "unable to allocate memory for reference %s\n", p);
 	  return;
 	}
+      tmp->file = malloc (strlen (stack[sp].name) + 1);
+      if (!tmp->file)
+	{
+	  printerr (1, "unable to allocate memory for reference filename\n");
+	  free (tmp);
+	  return;
+	}
+      strcpy (tmp->file, stack[sp].name);
+      if (stack[sp].dir)
+	{
+	  tmp->dir = malloc (strlen (stack[sp].dir->name)
+			  + sizeof (struct includedir));
+	  if (!tmp->dir)
+	    {
+	      printerr (1, "unable to allocate memory for reference dir\n");
+	      free (tmp->file);
+	      free (tmp);
+	      return;
+	    }
+	  strcpy (tmp->dir->name, stack[sp].dir->name);
+	}
+      else
+	tmp->dir = NULL;
       opos = ftell (outfile);
       lpos = havelist ? ftell (listfile) : 0;
       if (verbose >= 3)
 	fprintf (stderr, "%5d (0x%04x): reference set to %s (delimiter=%c, "
 		 "sp=%d)\n", stack[sp].line, addr, p, delimiter, sp);
       strcpy (tmp->input, p);
+      tmp->line = stack[sp].line;
       tmp->addr = addr;
       tmp->baseaddr = baseaddr;
       tmp->count = ds_count;
@@ -2707,6 +2732,8 @@ assemble (void)
   {
     struct reference *next;
     struct reference *tmp;
+    /* Add a stack frame for error reporting.  */
+    ++sp;
     for (tmp = firstreference; tmp; tmp = next)
       {
 	int ref;
@@ -2714,8 +2741,14 @@ assemble (void)
 	fseek (outfile, tmp->oseekpos, SEEK_SET);
 	if (havelist)
 	  fseek (listfile, tmp->lseekpos, SEEK_SET);
+	stack[sp].name = tmp->file;
+	stack[sp].dir = tmp->dir;
+	stack[sp].line = tmp->line;
 	ref = compute_ref (tmp, 0);
 	wrt_ref (ref, tmp->type, tmp->count);
+	if (tmp->dir)
+	  free (tmp->dir);
+	free (tmp->file);
 	free (tmp);
       }
   }

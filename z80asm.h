@@ -158,6 +158,8 @@ struct reference
   int done;			/* if this reference has been computed */
   int computed_value;		/* value (only valid if done = true) */
   int level;			/* maximum stack level of labels to use */
+  struct includedir *dir;	/* dirname of file (for error reporting) */
+  char *file;			/* filename (for error reporting) */
   char input[1];		/* variable size buffer containing formula */
 };
 
