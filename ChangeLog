@@ -3,6 +3,7 @@
 	* z80asm.c: Wrap program counter consistently.
 	* z80asm.c, z80asm.h: Fix error reporting in references.
 	* all files: Update license to GPL version 3 or later.
+	* Makefile: Improve make dist, and make it work with git.
 
 2007-06-14  Bas Wijnen  <shevek@fmf.nl>
 
