@@ -37,6 +37,7 @@ clean:
 	rm -f z80asm z80asm.exe
 
 dist: clean
+	! git status | grep modified
 	echo $(VERSION) > VERSION
 	rm -rf /tmp/z80asm-$(VERSION)
 	git archive --format=tar --prefix=z80asm-$(VERSION)/ HEAD | tar xf - -C /tmp
