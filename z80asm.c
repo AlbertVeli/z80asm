@@ -618,6 +618,7 @@ write_one_byte (int b, int list)
       listdepth += 3;
     }
   addr++;
+  addr &= 0xffff;
 }
 
 /* write byte to outfile and possibly some index things as well */
@@ -1397,7 +1398,7 @@ wrt_ref (int val, int type, int count)
       return;
     case TYPE_RELB:
       val -= count;
-      if (val < -128 || val > 127)
+      if (val & 0xff80 && ~val & 0xff80) 
 	{
 	  printerr (1, "relative jump out of range (%d)\n", val);
 	}
@@ -2464,7 +2465,7 @@ assemble (void)
 	      file_ended = 1;
 	      break;
 	    case ORG:
-	      addr = rd_expr (&ptr, '\0', NULL, sp, 1);
+	      addr = rd_expr (&ptr, '\0', NULL, sp, 1) & 0xffff;
 	      break;
 	    case INCLUDE:
 	      if (sp + 1 >= MAX_INCLUDE)
@@ -2542,6 +2543,7 @@ assemble (void)
 			break;
 		      }
 		    addr += num;
+		    addr &= 0xffff;
 		  }
 		fclose (incfile);
 		free (name);
