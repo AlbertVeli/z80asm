@@ -1,6 +1,6 @@
 /* Z80 assembler by shevek
 
-   Copyright (C) 2002-2007 Bas Wijnen <wijnen@debian.org>
+   Copyright (C) 2002-2009 Bas Wijnen <wijnen@debian.org>
    Copyright (C) 2005 Jan Wilmans <jw@dds.nl>
 
    This file is part of z80asm.
@@ -432,7 +432,14 @@ rd_value (const char **p, int *valid, int level, int *check, int print_errors)
 	return not ^ (sign * rd_number (p, NULL, base));
       }
     default:
-      return not ^ (sign * rd_label (p, valid, NULL, level, print_errors));
+      {
+	int value;
+	exist = 1;
+	value = rd_label (p, valid ? &exist : NULL, NULL, level, print_errors);
+	if (!exist)
+	  *valid = 0;
+	return not ^ (sign * value);
+      }
     }
 }
 
@@ -683,8 +690,6 @@ do_rd_expr (const char **p, char delimiter, int *valid, int level, int *check,
 	     "%5d (0x%04x): Starting to read expression "
 	     "(string=%s, delimiter=%c).\n", stack[sp].line, addr, *p,
 	     delimiter ? delimiter : ' ');
-  if (valid)
-    *valid = 1;
   *p = delspc (*p);
   if (!**p || **p == delimiter)
     {
@@ -740,7 +745,10 @@ rd_expr (const char **p, char delimiter, int *valid, int level,
 	 int print_errors)
 {
   int check = 1;
-  int result = do_rd_expr (p, delimiter, valid, level, &check, print_errors);
+  int result;
+  if (valid)
+    *valid = 1;
+  result = do_rd_expr (p, delimiter, valid, level, &check, print_errors);
   if (print_errors && (!valid || *valid) && check)
     printerr (0, "expression fully enclosed in parenthesis\n");
   return result;

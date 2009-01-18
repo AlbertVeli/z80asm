@@ -1,0 +1,5 @@
+expressions.o
+gnulib/getopt.o
+gnulib/getopt1.o
+z80asm
+z80asm.o
