@@ -45,3 +45,5 @@ dist: clean
 	git archive --format=tar --prefix=z80asm-$(VERSION)/ HEAD | tar xf - -C /tmp
 	tar cvzf ../z80asm-$(VERSION).tar.gz -C /tmp z80asm-$(VERSION)
 	rm -r /tmp/z80asm-$(VERSION)
+	cd .. && gpg -b z80asm-$(VERSION).tar.gz
+	scp ../z80asm-$(VERSION).tar.gz* dl.sv.nongnu.org:/releases/z80asm/
