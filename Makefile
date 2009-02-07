@@ -47,3 +47,4 @@ dist: clean
 	rm -r /tmp/z80asm-$(VERSION)
 	cd .. && gpg -b z80asm-$(VERSION).tar.gz
 	scp ../z80asm-$(VERSION).tar.gz* dl.sv.nongnu.org:/releases/z80asm/
+	git push
