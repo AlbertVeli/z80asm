@@ -1,6 +1,6 @@
 /* Z80 assembler by shevek
 
-   Copyright (C) 2002-2007 Bas Wijnen <wijnen@debian.org>
+   Copyright (C) 2002-2009 Bas Wijnen <wijnen@debian.org>
    Copyright (C) 2005 Jan Wilmans <jw@dds.nl>
 
    This file is part of z80asm.
@@ -2452,11 +2452,16 @@ assemble (void)
 		  printerr (1, "No data for word definition\n");
 		  break;
 		}
-	      do
+	      while (1)
 		{
 		  new_reference (readword, TYPE_ABSW, ',', 1);
+		  ptr = delspc (ptr);
+		  if (*ptr != ',')
+		    break;
+		  ++ptr;
+		  if (!(r = rd_word (&ptr, ',')))
+		    printerr (1, "Missing expression in defw\n");
 		}
-	      while ((r = rd_word (&ptr, ',')));
 	      break;
 	    case DEFS:
 	    case DS:

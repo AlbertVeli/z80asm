@@ -1,3 +1,8 @@
+2009-04-11  Bas Wijnen  <wijnen@debian.org>
+
+	* z80asm.c: Fixed bug that defw/dw didn't accept more than one
+	argument.
+
 2009-01-18  Bas Wijnen  <wijnen@debian.org>
 
 	* expressions.c: Fix incorrect valid declaration of expressions when
