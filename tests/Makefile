@@ -18,22 +18,13 @@
 
 # The output of the assembler can be parsed by vim or emacs.
 
-# Detect if running under MinGW
-UNAME := $(patsubst MINGW%,MINGW,$(shell uname))
-
 all: pass
 
 %: %.asm %.correct-err %.correct-bin ../z80asm Makefile
 	../z80asm -I ../headers $< -o $@.bin 2> $@.err
 	diff $@.correct-bin $@.bin
-ifeq ($(UNAME), MINGW)
-	@# Workaround for 0d0a newlines
-	tr -d '\r' < $@.err > $@_generic.err
-	diff $@.correct-err $@_generic.err
-else
-	diff $@.correct-err $@.err
-endif
-	rm -f $@.bin $@.err $@_generic.err
+	diff --strip-trailing-cr $@.correct-err $@.err
+	rm $@.bin $@.err
 
 clean:
 	rm -f *-actual.err *.bin
